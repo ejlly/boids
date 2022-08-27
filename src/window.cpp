@@ -8,7 +8,10 @@
 // GLFW
 #include <GLFW/glfw3.h>
 
+// GLM
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Function prototypes
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -22,11 +25,13 @@ const GLchar* vertexShaderSource = "#version 330 core\n"
     "layout (location = 1) in vec3 color;\n"
 	"uniform vec3 offset;\n"
     "out vec3 ourColor;\n"
+	"uniform mat4 transform;\n"
     "void main()\n"
     "{\n"
-    "gl_Position = vec4(position + offset, 1.0);\n"
+    "gl_Position = transform * vec4(position + offset, 1.0f);\n"
     "ourColor = color;\n"
     "}\0";
+
 const GLchar* fragmentShaderSource = "#version 330 core\n"
     "in vec3 ourColor;\n"
     "out vec4 color;\n"
@@ -103,6 +108,8 @@ int main()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+	
+
 
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
@@ -133,7 +140,7 @@ int main()
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
-        // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
+        // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
         glfwPollEvents();
 
         // Render
@@ -141,13 +148,22 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 		
+        glUseProgram(shaderProgram);
+
 		GLfloat timeValue = glfwGetTime();
 		GLfloat offsetValue = (sin(timeValue) / 2);
 		GLint offsetLocation = glGetUniformLocation(shaderProgram, "offset");
 		glUniform3f(offsetLocation, offsetValue, 0.0f, 0.0f);
 
+		GLint transLoc = glGetUniformLocation(shaderProgram, "transform");
+
+
+		glm::mat4 trans(1.0f);
+		trans = glm::rotate(trans, timeValue, glm::vec3(0.0f, 0.0f, 1.0f));
+		glUniformMatrix4fv(transLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+
         // Draw the triangle
-        glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glBindVertexArray(0);
