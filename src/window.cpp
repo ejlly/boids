@@ -46,8 +46,9 @@ int main(){
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+	GLuint const width = 1024, height = 768;
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(1024, 768, "LearnOpenGL", nullptr, nullptr);
+	window = glfwCreateWindow(width, height, "LearnOpenGL", nullptr, nullptr);
 	if(window == nullptr){
 		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
 		glfwTerminate();
@@ -62,32 +63,40 @@ int main(){
 		glfwTerminate();
 		return -1;
 	}
-	//glViewport(0, 0, 1024, 768);
+
+	int w_width, w_height;
+    glfwGetFramebufferSize(window, &w_width, &w_height);  
+    glViewport(0, 0, w_width, w_height);
 
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-	// Dark blue background
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
 
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader.fragmentshader" );
 
 
 	static const GLfloat g_vertex_buffer_data[] = { 
-		-1.0f, -1.0f, 0.0f,
-		 1.0f, -1.0f, 0.0f,
-		 0.0f,  1.0f, 0.0f,
+		-.5f, -.5f, 0.0f,
+		 .5f, -.5f, 0.0f,
+		 0.0f,  .5f, 0.0f,
 	};
 
-	GLuint vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	GLuint VAO, VBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
+
+	// 1rst attribute buffer : vertices
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) 0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
 
 	glfwSetKeyCallback(window, key_callback);
 
@@ -97,27 +106,17 @@ int main(){
 		glfwPollEvents();
 
 		// Clear the screen
-		glClear( GL_COLOR_BUFFER_BIT );
+		glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Use our shader
 		glUseProgram(programID);
 
-		// 1rst attribute buffer : vertices
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-		glVertexAttribPointer(
-			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
-
+		glBindVertexArray(VAO);
 		// Draw the triangle !
 		glDrawArrays(GL_TRIANGLES, 0, 3); // 3 indices starting at 0 -> 1 triangle
 
-		glDisableVertexAttribArray(0);
+		glBindVertexArray(0);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -126,8 +125,8 @@ int main(){
 
 
 	// Cleanup VBO
-	glDeleteBuffers(1, &vertexbuffer);
-	glDeleteVertexArrays(1, &VertexArrayID);
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
 	glDeleteProgram(programID);
 
 	// Close OpenGL window and terminate GLFW
