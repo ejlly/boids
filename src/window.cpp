@@ -1,5 +1,5 @@
 // Include standard headers
-#include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 
 // Include GLEW
@@ -25,6 +25,19 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+const GLchar *vertexCode = "#version 330 core\n\
+							  layout(location = 0) in vec3 position;\n\
+							  void main(){\n\
+							  gl_Position = vec4(position.x, position.y, position.z, 1.0);\n\
+							  }";
+
+const GLchar *fragmentCode = "#version 330 core\n\
+								out vec4 color;\n\
+								uniform vec4 ourColor;\n\
+								void main(){\n\
+								color = ourColor;\n\
+								}";
+
 int main(){
 	/*
 	mat4 myMatrix;
@@ -37,7 +50,6 @@ int main(){
 	// fill myMatrix and myVector somehow
 	glm::vec4 transformedVector = myMatrix * myVector; // Again, in this order ! this is important.
 	*/
-
 
 	// Initialise GLFW
 	if(!glfwInit()){
@@ -76,8 +88,28 @@ int main(){
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	// Create and compile our GLSL program from the shaders
-	GLuint programID = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader.fragmentshader");
-	GLuint programID2 = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader2.fragmentshader");
+	//GLuint programID = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader.fragmentshader");
+	//GLuint programID2 = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader2.fragmentshader");
+
+	GLuint vertexProgram = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexProgram, 1, &vertexCode, nullptr);
+	glCompileShader(vertexProgram);
+
+	GLuint fragmentProgram = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentProgram, 1, &fragmentCode, nullptr);
+	glCompileShader(fragmentProgram);
+
+	GLuint programID = glCreateProgram();
+	glAttachShader(programID, vertexProgram);
+	glAttachShader(programID, fragmentProgram);
+	glLinkProgram(programID);
+
+
+	glDetachShader(programID, vertexProgram);
+	glDetachShader(programID, fragmentProgram);
+	
+	glDeleteShader(vertexProgram);
+	glDeleteShader(fragmentProgram);
 
 	GLfloat vertices[] = {
 	0.5f, 0.5f, 0.0f, // Top Right
@@ -157,14 +189,22 @@ int main(){
 		glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Use our shader
+		GLfloat timeValue = glfwGetTime();
+		GLfloat greenValue = (sin(timeValue * 4) / 2) + 0.5;
+		GLfloat redValue = (sin(timeValue * 3) / 2) + 0.5;
+		GLint vertexColorLocation = glGetUniformLocation(programID, "ourColor");
+
 		glUseProgram(programID);
+		//glUseProgram(vertexProgram);
+		glUniform4f(vertexColorLocation, redValue, greenValue, 0.0f, 1.0f);
+
+		// Use our shader
 		glBindVertexArray(VAOs[0]);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 3 indices starting at 0 -> 1 triangle
 		glBindVertexArray(0);
 
 		// Use our shader
-		glUseProgram(programID2);
+		//glUseProgram(programID2);
 		glBindVertexArray(VAOs[1]);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 3 indices starting at 0 -> 1 triangle
 		glBindVertexArray(0);
@@ -181,7 +221,7 @@ int main(){
 	glDeleteBuffers(2, VBOs);
 
 	glDeleteProgram(programID);
-	glDeleteProgram(programID2);
+	//glDeleteProgram(programID2);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
