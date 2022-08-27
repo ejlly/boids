@@ -19,6 +19,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 // closing the application
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+	if(key == GLFW_KEY_N && action == GLFW_PRESS)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if(key == GLFW_KEY_B && action == GLFW_PRESS)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 int main(){
@@ -74,27 +78,40 @@ int main(){
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader.fragmentshader" );
 
-
-	static const GLfloat g_vertex_buffer_data[] = { 
-		-.5f, -.5f, 0.0f,
-		 .5f, -.5f, 0.0f,
-		 0.0f,  .5f, 0.0f,
+	GLfloat vertices[] = {
+	0.5f, 0.5f, 0.0f, // Top Right
+	0.5f, -0.5f, 0.0f, // Bottom Right
+	-0.5f, -0.5f, 0.0f, // Bottom Left
+	-0.5f, 0.5f, 0.0f, // Top Left
+	-1.0f, 0.0f, 0.0f
 	};
 
-	GLuint VAO, VBO;
+	GLuint indices[] = { // Note that we start from 0!
+	0, 1, 3, // First Triangle
+	1, 2, 3, // Second Triangle
+	2, 3, 4
+	};
+
+	GLuint VAO, VBO, EBO;
+
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 
 	// 1rst attribute buffer : vertices
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) 0);
 	glEnableVertexAttribArray(0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glBindVertexArray(0);
 
@@ -114,7 +131,7 @@ int main(){
 
 		glBindVertexArray(VAO);
 		// Draw the triangle !
-		glDrawArrays(GL_TRIANGLES, 0, 3); // 3 indices starting at 0 -> 1 triangle
+		glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0); // 3 indices starting at 0 -> 1 triangle
 
 		glBindVertexArray(0);
 
@@ -126,6 +143,7 @@ int main(){
 
 	// Cleanup VBO
 	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &EBO);
 	glDeleteBuffers(1, &VBO);
 	glDeleteProgram(programID);
 
