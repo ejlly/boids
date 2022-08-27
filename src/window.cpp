@@ -1,231 +1,171 @@
-// Include standard headers
 #include <iostream>
 #include <stdlib.h>
 
-// Include GLEW
+// GLEW
+#define GLEW_STATIC
 #include <GL/glew.h>
 
-// Include GLFW
+// GLFW
 #include <GLFW/glfw3.h>
-GLFWwindow* window;
 
-// Include GLM
 #include <glm/glm.hpp>
 
-#include "common/shader.hpp"
+// Function prototypes
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode){
-// When a user presses the escape key, we set the WindowShouldCloseproperty to true,
-// closing the application
-	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
-	if(key == GLFW_KEY_N && action == GLFW_PRESS)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	if(key == GLFW_KEY_B && action == GLFW_PRESS)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
+// Window dimensions
+const GLuint WIDTH = 800, HEIGHT = 600;
 
-const GLchar *vertexCode = "#version 330 core\n\
-							  layout(location = 0) in vec3 position;\n\
-							  void main(){\n\
-							  gl_Position = vec4(position.x, position.y, position.z, 1.0);\n\
-							  }";
+// Shaders
+const GLchar* vertexShaderSource = "#version 330 core\n"
+    "layout (location = 0) in vec3 position;\n"
+    "layout (location = 1) in vec3 color;\n"
+	"uniform vec3 offset;\n"
+    "out vec3 ourColor;\n"
+    "void main()\n"
+    "{\n"
+    "gl_Position = vec4(position + offset, 1.0);\n"
+    "ourColor = color;\n"
+    "}\0";
+const GLchar* fragmentShaderSource = "#version 330 core\n"
+    "in vec3 ourColor;\n"
+    "out vec4 color;\n"
+    "void main()\n"
+    "{\n"
+    "color = vec4(ourColor, 1.0f);\n"
+    "}\n\0";
 
-const GLchar *fragmentCode = "#version 330 core\n\
-								out vec4 color;\n\
-								uniform vec4 ourColor;\n\
-								void main(){\n\
-								color = ourColor;\n\
-								}";
+GLFWwindow* window;
 
-int main(){
-	/*
-	mat4 myMatrix;
-	vec4 myVector;
-	// fill myMatrix and myVector somehow
-	vec4 transformedVector = myMatrix * myVector; // Yeah, it's pretty much the same than GLM
+// The MAIN function, from here we start the application and run the game loop
+int main()
+{
+    // Init GLFW
+    glfwInit();
+    // Set all the required options for GLFW
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-	glm::mat4 myMatrix;
-	glm::vec4 myVector;
-	// fill myMatrix and myVector somehow
-	glm::vec4 transformedVector = myMatrix * myVector; // Again, in this order ! this is important.
-	*/
+    // Create a GLFWwindow object that we can use for GLFW's functions
+    window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    glfwMakeContextCurrent(window);
 
-	// Initialise GLFW
-	if(!glfwInit()){
-		fprintf(stderr, "Failed to initialize GLFW\n");
-		return -1;
-	}
+    // Set the required callback functions
+    glfwSetKeyCallback(window, key_callback);
 
-	//glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
+    glewExperimental = GL_TRUE;
+    // Initialize GLEW to setup the OpenGL Function pointers
+    glewInit();
 
-	GLuint const width = 1024, height = 768;
-	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(width, height, "LearnOpenGL", nullptr, nullptr);
-	if(window == nullptr){
-		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
-		glfwTerminate();
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
-
-	// Initialize GLEW
-	glewExperimental = true; // Needed for core profile
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		glfwTerminate();
-		return -1;
-	}
-
-	int w_width, w_height;
-    glfwGetFramebufferSize(window, &w_width, &w_height);  
-    glViewport(0, 0, w_width, w_height);
-
-	// Ensure we can capture the escape key being pressed below
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-	// Create and compile our GLSL program from the shaders
-	//GLuint programID = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader.fragmentshader");
-	//GLuint programID2 = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader2.fragmentshader");
-
-	GLuint vertexProgram = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexProgram, 1, &vertexCode, nullptr);
-	glCompileShader(vertexProgram);
-
-	GLuint fragmentProgram = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentProgram, 1, &fragmentCode, nullptr);
-	glCompileShader(fragmentProgram);
-
-	GLuint programID = glCreateProgram();
-	glAttachShader(programID, vertexProgram);
-	glAttachShader(programID, fragmentProgram);
-	glLinkProgram(programID);
+    // Define the viewport dimensions
+    glViewport(0, 0, WIDTH, HEIGHT);
 
 
-	glDetachShader(programID, vertexProgram);
-	glDetachShader(programID, fragmentProgram);
-	
-	glDeleteShader(vertexProgram);
-	glDeleteShader(fragmentProgram);
-
-	GLfloat vertices[] = {
-	0.5f, 0.5f, 0.0f, // Top Right
-	0.5f, -0.5f, 0.0f, // Bottom Right
-	-0.5f, -0.5f, 0.0f, // Bottom Left
-	-0.5f, 0.5f, 0.0f, // Top Left
-	};
-
-	GLuint indices[] = { // Note that we start from 0!
-	0, 1, 3, // First Triangle
-	1, 2, 3 // Second Triangle
-	};
-
-	GLfloat vertices2[] = {
-	1.0f, 1.0f, 0.0f,
-	0.5f, 0.5f, 0.0f,
-	1.0f, 0.5f, 0.0f,
-	1.0f, 0.0f, 0.0f
-	};
-	
-	GLuint indices2[] = {
-	0, 1, 2,
-	1, 2, 3
-	};
-
-	GLuint VAOs[2], VBOs[2], EBOs[2];
-
-	//First set
-
-	glGenVertexArrays(2, VAOs);
-	glGenBuffers(2, VBOs);
-	glGenBuffers(2, EBOs);
-
-	glBindVertexArray(VAOs[0]);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    // Build and compile our shader program
+    // Vertex shader
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    // Check for compile time errors
+    GLint success;
+    GLchar infoLog[512];
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+    // Fragment shader
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+    // Check for compile time errors
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+    // Link shaders
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    // Check for linking errors
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+    }
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) 0);
-	glEnableVertexAttribArray(0);
+    // Set up vertex data (and buffer(s)) and attribute pointers
+    GLfloat vertices[] = {
+        // Positions         // Colors
+         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // Bottom Right
+        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom Left
+         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // Top 
+    };
+    GLuint VBO, VAO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    // Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+    glBindVertexArray(VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glBindVertexArray(0);
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+    // Color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
 
-	//Second set
-	
-	glBindVertexArray(VAOs[1]);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices2), indices2, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) 0);
-	glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glBindVertexArray(0);
-	
+    glBindVertexArray(0); // Unbind VAO
 
 
-	glfwSetKeyCallback(window, key_callback);
+    // Game loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
+        glfwPollEvents();
 
-	// Check if the ESC key was pressed or the window was closed
-	//while(glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && !glfwWindowShouldClose(window)){
-	while(!glfwWindowShouldClose(window)){
-		glfwPollEvents();
-
-		// Clear the screen
-		glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
+        // Render
+        // Clear the colorbuffer
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+		
 		GLfloat timeValue = glfwGetTime();
-		GLfloat greenValue = (sin(timeValue * 4) / 2) + 0.5;
-		GLfloat redValue = (sin(timeValue * 3) / 2) + 0.5;
-		GLint vertexColorLocation = glGetUniformLocation(programID, "ourColor");
+		GLfloat offsetValue = (sin(timeValue) / 2);
+		GLint offsetLocation = glGetUniformLocation(shaderProgram, "offset");
+		glUniform3f(offsetLocation, offsetValue, 0.0f, 0.0f);
 
-		glUseProgram(programID);
-		//glUseProgram(vertexProgram);
-		glUniform4f(vertexColorLocation, redValue, greenValue, 0.0f, 1.0f);
+        // Draw the triangle
+        glUseProgram(shaderProgram);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
 
-		// Use our shader
-		glBindVertexArray(VAOs[0]);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 3 indices starting at 0 -> 1 triangle
-		glBindVertexArray(0);
-
-		// Use our shader
-		//glUseProgram(programID2);
-		glBindVertexArray(VAOs[1]);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 3 indices starting at 0 -> 1 triangle
-		glBindVertexArray(0);
-	
-		// Swap buffers
-		glfwSwapBuffers(window);
-
-	}
-
-
-	// Cleanup VBO
-	glDeleteVertexArrays(2, VAOs);
-	glDeleteBuffers(2, EBOs);
-	glDeleteBuffers(2, VBOs);
-
-	glDeleteProgram(programID);
-	//glDeleteProgram(programID2);
-
-	// Close OpenGL window and terminate GLFW
-	glfwTerminate();
-
-	return 0;
+        // Swap the screen buffers
+        glfwSwapBuffers(window);
+    }
+    // Properly de-allocate all resources once they've outlived their purpose
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    // Terminate GLFW, clearing any resources allocated by GLFW.
+    glfwTerminate();
+    return 0;
 }
 
+// Is called whenever a key is pressed/released via GLFW
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+{
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GL_TRUE);
+}
