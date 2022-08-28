@@ -13,8 +13,11 @@ float const Boid::distance(Boid const &b){
 }
 
 void Boid::update(float time){
-	pos = pos + time*speed*dir;
+	pos = pos + 12.f*time*speed*dir;
 	//rotate dir into new_dir
+	dir += .02f * new_dir;
+	new_dir = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::normalize(dir);
 }
 
 float* const Flock::distances(){
@@ -83,12 +86,12 @@ void Flock::repulsionModifier(float* distance_array){
 		for(int j(0); j<n; j++, it_neigh){
 			if(i < j)
 				if(distance_array[(i*(i+1))/2 + j - 1] < repulsionDistance){
-					tmp += glm::cross(it->dir, it_neigh->dir);
+					tmp += glm::cross(it->dir + eps_vector, it_neigh->dir);
 					count++;
 				}
 			if(i > j)
 				if(distance_array[(j*(j+1))/2 + i - 1] < repulsionDistance){
-					tmp += glm::cross(it->dir, it_neigh->dir);
+					tmp += glm::cross(it->dir + eps_vector, it_neigh->dir);
 					count++;
 				}
 		}

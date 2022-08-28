@@ -34,8 +34,9 @@ class Flock{
 		//TODO: change names
 		inline static float coherenceRate = .1f; //rad.s^-1
 		inline static float separationRate = .4f; //rad.s^-1
-		inline static float perceptionDistance = 1.0f; //units
-		inline static float repulsionDistance = .2f; //units
+		inline static float perceptionDistance = 5.0f; //units
+		inline static float repulsionDistance = 1.0f; //units
+		inline static glm::vec3 eps_vector = glm::vec3(1e-9, 1e-9, 1e-9);
 		std::list<Boid> boids;
 		
 		float* const distances();

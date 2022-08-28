@@ -139,10 +139,7 @@ int main(){
 	}
 
 	auto a = flock.begin();
-	a->pos = glm::vec3(2.0f, 2.0f, 2.0f);
-	a++;
-	a->dir = glm::vec3(0.25f, 0.4330127019f, 0.8660254038f);
-	a->dir = glm::vec3(.5f, -1.0f, 0.0f);
+	a->pos = glm::vec3(2.0f, 0.0f, 2.0f);
 	
 
 	GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -184,7 +181,6 @@ int main(){
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 		
 		auto it = flock.begin();
-
 		for(int i(0); i<flock.size(); i++, it++){
 
 			glm::mat4 model(1.0f);
