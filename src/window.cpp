@@ -17,6 +17,9 @@
 #include "common/shader.hpp"
 #include "common/controls.hpp"
 
+//Boids
+#include "boids.hpp"
+
 // Function prototypes
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
@@ -40,6 +43,7 @@ int main(){
 
     // Set the required callback functions
     glfwSetKeyCallback(window, key_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
     // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
     glewExperimental = GL_TRUE;
@@ -85,6 +89,8 @@ int main(){
 		3, 4
 	};
 
+	glm::vec3 const asset_orientation = glm::vec3(0.0f, 0.f, 1.0f);
+
 
     GLuint EBOs[2], VBO, VAOs[2];
     glGenVertexArrays(2, VAOs);
@@ -124,15 +130,35 @@ int main(){
 
     glBindVertexArray(0); // Unbind VAO
 
+
+#define BOIDS 50
+
+	Flock flock;
+	for(int i(0); i<BOIDS; i++){
+		flock.add_boid();
+	}
+
+	auto a = flock.begin();
+	a->pos = glm::vec3(2.0f, 2.0f, 2.0f);
+	a++;
+	a->dir = glm::vec3(0.25f, 0.4330127019f, 0.8660254038f);
+	a->dir = glm::vec3(.5f, -1.0f, 0.0f);
+	
+
+	GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+	GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+	GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 	
 	glEnable(GL_DEPTH_TEST);  
 
     // Game loop
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)){
         // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
         glfwPollEvents();
+		GLfloat timeValue = glfwGetTime();
+
 		computeMatricesFromInputs();
+		flock.update((double) timeValue);
 
         // Clear the colorbuffer
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -140,42 +166,44 @@ int main(){
 		
         glUseProgram(shaderProgram);
 		
-		GLfloat timeValue = glfwGetTime();
 		GLfloat offsetValue = (sin(timeValue) / 2);
 
 
 
-		glm::mat4 trans(1.0f);
-		trans = glm::rotate(trans, timeValue, glm::vec3(6.2f, 1.5f, .5f));
+		//glm::mat4 trans(1.0f);
+		//trans = glm::rotate(trans, timeValue, glm::vec3(6.2f, 1.5f, .5f));
 
 		glm::mat4 model(1.0f);
-		model = glm::translate(model, glm::vec3(2*offsetValue, 0.0f, -3.0f));
-		model = glm::rotate(model, timeValue, glm::vec3(6.2f, 1.5f, .5f));
 		glm::mat4 view = getViewMatrix();
 		glm::mat4 projection = getProjectionMatrix();
 
 
 
-		GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-		GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-		GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+		
+		auto it = flock.begin();
 
+		for(int i(0); i<flock.size(); i++, it++){
 
-        //Draw the structure
-        glBindVertexArray(VAOs[0]);
-        glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
+			glm::mat4 model(1.0f);
+			model = glm::translate(model, -it->pos);
+			model = glm::rotate(model, glm::acos(glm::dot(it->dir, asset_orientation)), glm::cross(it->dir, asset_orientation));
 
-		glBindVertexArray(VAOs[1]);
-        glDrawElements(GL_LINES, 18, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			//Draw the structure
+			glBindVertexArray(VAOs[0]);
+			glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
 
-        // Swap the screen buffers
-        glfwSwapBuffers(window);
+			glBindVertexArray(VAOs[1]);
+			glDrawElements(GL_LINES, 18, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+
+		// Swap the screen buffers
+		glfwSwapBuffers(window);
     }
     // Properly de-allocate all resources once they've outlived their purpose
     glDeleteVertexArrays(2, VAOs);
