@@ -40,16 +40,17 @@ class Boid{
 class Flock{
 	private:
 		//TODO: change names
-		inline static float coherenceRate = .1f; //rad.s^-1
-		inline static float separationRate = .4f; //rad.s^-1
+		inline static float coherenceRate = .1f;
+		inline static float separationRate = .4f;
+		inline static float wallRepulsionRate = 2*separationRate;  
 		inline static float perceptionDistance = 5.0f; //units
 		inline static float repulsionDistance = 2.f; //units
-		inline static glm::vec3 eps_vector = glm::vec3(1e-6, 1e-6, 1e-6);
-		inline static float box_size = 30.0f;
+		inline static float box_size = 20.0f; //must be bigger than 1.0f
 		std::list<Boid> boids;
 		
 		void coherenceModifier(float* distance_array);
 		void repulsionModifier();
+		void boxModifier();
 
 	public:
 		void add_boid();

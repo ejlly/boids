@@ -23,7 +23,9 @@ glm::vec3 const Boid::dir(){
 
 void Boid::update(float time){
 	
+	float const naturalDecay = .99995f;
 	speed += time*accel;
+	speed *= naturalDecay;
 
 	pos += time*speed;
 
@@ -50,6 +52,8 @@ void Boid::update(float time){
 
 	new_dir = glm::vec3(0.0f, 0.0f, 0.0f);
 	*/
+
+	accel = glm::vec3(0.0f);
 }
 
 void Boid::get_model(glm::mat4 &model){
@@ -106,9 +110,9 @@ void Flock::repulsionModifier(){
 		for(int j(0); j<n; j++, it_neigh++){
 			float const dist(it->distance(*it_neigh));
 			if(i != j && dist < repulsionDistance){
-				std::cout << "dist : " << dist << " & repulsion dist : " << repulsionDistance << std::endl;
+				//std::cout << "dist : " << dist << " & repulsion dist : " << repulsionDistance << std::endl;
 				if(glm::any(glm::greaterThan(glm::abs(it->pos - it_neigh->pos), glm::vec3(FLT_EPSILON)))){
-					std::cout << "modi\n";
+					//std::cout << "modi\n";
 					tmp +=  glm::normalize(it->pos - it_neigh->pos)/(dist*dist);
 					allSamePos = false;
 				}
@@ -119,6 +123,30 @@ void Flock::repulsionModifier(){
 		if(allSamePos)
 			tmp += glm::ballRand(1.0f);
 		it->accel += tmp * separationRate;
+	}
+}
+
+void Flock::boxModifier(){
+	//TODO : delete elements out of the box, with a small margin to make sure they don't "jump" out of the box
+	
+	float const dist_to_box = 4.0f;
+
+
+	for(auto &b: boids){
+		glm::vec3 tmp(0.0f);
+		for(int dimension(0); dimension<3; dimension++){
+			if(glm::abs(b.pos[dimension] - box_size) < dist_to_box){
+				glm::vec3 wallRepulsionForce(0.0f);
+				wallRepulsionForce[dimension] = -1/glm::abs(b.pos[dimension] - box_size);
+				tmp += wallRepulsionForce;
+			}
+			else if(glm::abs(b.pos[dimension] + box_size) < dist_to_box){
+				glm::vec3 wallRepulsionForce(0.0f);
+				wallRepulsionForce[dimension] = 1/glm::abs(b.pos[dimension] - box_size);
+				tmp += wallRepulsionForce;
+			}
+		}
+		b.accel += 10.0f * wallRepulsionRate * tmp;
 	}
 }
 
@@ -146,9 +174,10 @@ std::list<Boid>::iterator Flock::begin(){
 void Flock::update(){
 
 	repulsionModifier();
+	boxModifier();
 
 	for(auto &b: boids){
-		b.update(.01);
+		b.update(.15);
 	}
 	
 
