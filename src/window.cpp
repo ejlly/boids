@@ -89,8 +89,6 @@ int main(){
 		3, 4
 	};
 
-	glm::vec3 const asset_orientation = glm::vec3(0.0f, 0.f, 1.0f);
-
 
     GLuint EBOs[2], VBO, VAOs[2];
     glGenVertexArrays(2, VAOs);
@@ -131,15 +129,11 @@ int main(){
     glBindVertexArray(0); // Unbind VAO
 
 
-#define BOIDS 50
+#define BOIDS 30
 
 	Flock flock;
-	for(int i(0); i<BOIDS; i++){
-		flock.add_boid();
-	}
+	flock.init_boids(BOIDS);
 
-	auto a = flock.begin();
-	a->pos = glm::vec3(2.0f, 0.0f, 2.0f);
 	
 
 	GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -155,7 +149,7 @@ int main(){
 		GLfloat timeValue = glfwGetTime();
 
 		computeMatricesFromInputs();
-		flock.update((double) timeValue);
+		flock.update();
 
         // Clear the colorbuffer
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -170,7 +164,6 @@ int main(){
 		//glm::mat4 trans(1.0f);
 		//trans = glm::rotate(trans, timeValue, glm::vec3(6.2f, 1.5f, .5f));
 
-		glm::mat4 model(1.0f);
 		glm::mat4 view = getViewMatrix();
 		glm::mat4 projection = getProjectionMatrix();
 
@@ -184,8 +177,7 @@ int main(){
 		for(int i(0); i<flock.size(); i++, it++){
 
 			glm::mat4 model(1.0f);
-			model = glm::translate(model, -it->pos);
-			model = glm::rotate(model, glm::acos(glm::dot(it->dir, asset_orientation)), glm::cross(it->dir, asset_orientation));
+			it->get_model(model);
 
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			//Draw the structure

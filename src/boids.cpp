@@ -1,44 +1,66 @@
 #include "boids.hpp"
+#include <iostream>
+
+float anglef(glm::vec3 const &a, glm::vec3 const &b){
+	//a and b are already normalized
+	return glm::acos(glm::dot(a, b));
+}
 
 Boid::Boid(){
 	pos = glm::vec3(0.0f, 0.0f, 0.0f);
-	dir = glm::vec3(1.0f, 0.0f, 0.0f);
-	orientation = dir;
+	speed = glm::vec3(0.0f, 0.0f, 0.0f);
 	new_dir = glm::vec3(0.0f, 0.0f, 0.0f);
-	speed = .5f;
+	accel = glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
 float const Boid::distance(Boid const &b){
 	return glm::distance(b.pos, pos);
 }
 
-void Boid::update(float time){
-	pos = pos + 12.f*time*speed*dir;
-	//rotate dir into new_dir
-	dir += .02f * new_dir;
-	new_dir = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::normalize(dir);
+glm::vec3 const Boid::dir(){
+	return glm::normalize(speed);
 }
 
-float* const Flock::distances(){
-	int const n = boids.size();
-	//all other items are distances
-	float* distance_array = new float[(n*(n+1))/2];
+void Boid::update(float time){
+	
+	speed += time*accel;
 
-	std::list<Boid>::iterator it1(boids.begin()), it2;
+	pos += time*speed;
 
-	for(int i(0); i<n; i++, it1++){
-		it2 = it1++; it1--;
-		for(int j(i+1); j<n; j++, it2++){
-			distance_array[(i*(i+1))/2 + j - 1] = it1->distance(*it2);
-		}
+	//might need to born values of speed
+	/*
+	glm::mat4 model(1.0f);
+
+	glm::vec3 rotVector = glm::normalize(glm::cross(dir, new_dir));
+	if(!glm::isnan(rotVector[0]) && !glm::isnan(rotVector[1]) && !glm::isnan(rotVector[2])){
+		
+		model = glm::rotate(model, glm::acos(glm::dot(dir, new_dir))/2, rotVector);
+
+		dir = glm::mat3(model) * dir;
+		std::cout << "dir is : " << dir[0] << " " << dir[1] << " " << dir[2] << std::endl;
+	std::cout << "new_dir is : " << new_dir[0] << " " << new_dir[1] << " " << new_dir[2] << std::endl;
+	}
+	else{
+		std::cout << "Failed to rotate !\n";
+		std::cout << "new_dir is : " << new_dir[0] << " " << new_dir[1] << " " << new_dir[2] << std::endl;
 	}
 
-	return distance_array;
-	//TODO: delete after use
+		std::cout << model[0][0] << " " << model[0][1] << " " << model[0][2] << std::endl << model[1][0] << " " << model[1][1] << " " << model[1][2] << std::endl << model[2][0] << " " << model[2][1] << " " << model[2][2] << std::endl << std::endl;
+
+
+	new_dir = glm::vec3(0.0f, 0.0f, 0.0f);
+	*/
+}
+
+void Boid::get_model(glm::mat4 &model){
+	model = glm::translate(model, -pos);
+	glm::vec3 dir = glm::normalize(speed);
+	if(glm::any(glm::greaterThan(glm::abs(dir - asset_orientation), glm::vec3(FLT_EPSILON))))
+		model = glm::rotate(model, glm::acos(glm::dot(dir, asset_orientation)), glm::cross(dir, asset_orientation));
 }
 
 void Flock::coherenceModifier(float* distance_array){
+	/*
 	int const n = boids.size();
 	
 	auto it(boids.begin());
@@ -46,64 +68,70 @@ void Flock::coherenceModifier(float* distance_array){
 	glm::vec3 bary(0.0f, 0.0f, 0.0f);
 
 	for(auto b: boids){
-		bary += b.dir;
 	}
 
 	for(int i(0); i<n; i++, it++){
 		auto it_neigh(boids.begin());
+		glm::vec3 const dir = it->dir();
+		bary += dir;
 		int count = 0;
-		glm::vec3 tmp(it->dir);
+		glm::vec3 tmp(dir);
 		for(int j(0); j<n; j++, it_neigh){
-			if(i < j)
-				if(distance_array[(i*(i+1))/2 + j - 1] < perceptionDistance){
-					tmp += it_neigh->dir;
-					count++;
-				}
-			if(i > j)
-				if(distance_array[(j*(j+1))/2 + i - 1] < perceptionDistance){
-					tmp += it_neigh->dir;
+			if((i < j && distance_array[(i*(i+1))/2 + j - 1] < repulsionDistance) || 
+			   (i > j && distance_array[(j*(j+1))/2 + i - 1] < repulsionDistance)){
+					//tmp += it_neigh->dir();
 					count++;
 				}
 		}
-		if(count > 0)
-			it->new_dir += tmp/(float) count;
+		if(count > 0){
+			it->new_dir += tmp * coherenceRate;
+			std::cout << "coherend\n";
+		}
 		else //no one near
 			it->new_dir += bary/(float) n;
-
-		it->new_dir *= coherenceRate;
 	}
+	*/
 }
 
-void Flock::repulsionModifier(float* distance_array){
+void Flock::repulsionModifier(){
 	int const n = boids.size();
 	
 	auto it(boids.begin());
 
 	for(int i(0); i<n; i++, it++){
 		auto it_neigh(boids.begin());
-		int count = 0;
-		glm::vec3 tmp(it->dir);
-		for(int j(0); j<n; j++, it_neigh){
-			if(i < j)
-				if(distance_array[(i*(i+1))/2 + j - 1] < repulsionDistance){
-					tmp += glm::cross(it->dir + eps_vector, it_neigh->dir);
-					count++;
+		glm::vec3 const dir = it->dir();
+		glm::vec3 tmp(0.0f);
+		bool allSamePos(true);
+		for(int j(0); j<n; j++, it_neigh++){
+			float const dist(it->distance(*it_neigh));
+			if(i != j && dist < repulsionDistance){
+				std::cout << "dist : " << dist << " & repulsion dist : " << repulsionDistance << std::endl;
+				if(glm::any(glm::greaterThan(glm::abs(it->pos - it_neigh->pos), glm::vec3(FLT_EPSILON)))){
+					std::cout << "modi\n";
+					tmp +=  glm::normalize(it->pos - it_neigh->pos)/(dist*dist);
+					allSamePos = false;
 				}
-			if(i > j)
-				if(distance_array[(j*(j+1))/2 + i - 1] < repulsionDistance){
-					tmp += glm::cross(it->dir + eps_vector, it_neigh->dir);
-					count++;
-				}
+			}
+			else
+				if(i != j) allSamePos = false;
 		}
-		if(count > 0)
-			it->new_dir += tmp/(float) count;
-		
-		it->new_dir *= separationRate;
+		if(allSamePos)
+			tmp += glm::ballRand(1.0f);
+		it->accel += tmp * separationRate;
 	}
 }
 
 void Flock::add_boid(){
 	boids.push_back(Boid());
+}
+
+void Flock::init_boids(int nbBoids){
+	for(int i(0); i<nbBoids; i++){
+		Boid tmp;
+		tmp.pos = glm::ballRand(10.0f);
+		boids.push_back(tmp);
+	}
 }
 
 unsigned int Flock::size(){
@@ -115,18 +143,13 @@ std::list<Boid>::iterator Flock::begin(){
 	return boids.begin();
 }
 
-void Flock::update(double lastTime){
-	double currentTime = glfwGetTime();
+void Flock::update(){
 
-	float* distance_array = distances();
-	coherenceModifier(distance_array);
-	repulsionModifier(distance_array);
-	
-	delete[] distance_array;
+	repulsionModifier();
 
 	for(auto &b: boids){
-		b.update(currentTime - lastTime);
+		b.update(.01);
 	}
+	
 
-	lastTime = currentTime;
 }
