@@ -55,17 +55,17 @@ int main(){
 
 
     // Build and compile our shader program
-	GLuint shaderProgram = LoadShaders("src/shaders/SimpleVertexShader.vertexshader", "src/shaders/SimpleFragmentShader.fragmentshader");
+	GLuint shaderProgram = LoadShaders("src/shaders/SimpleVertexShader.vs", "src/shaders/SimpleFragmentShader.fs");
 	
 
 
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
 		//Position				//Color Face			//Color edge
-		-.5f,	-.5f,	-.5f,	.0f,	.5f,	.5f,	.0f,	.0f,	.0f,
-		-.5f,	.5f,	-.5f,	.0f,	.5f,	.5f,	.0f,	.0f,	.0f,
-		.5f,	.5f,	-.5f,	.0f,	.5f,	.5f,	.0f,	.0f,	.0f,
-		.5f,	-.5f,	-.5f,	.0f,	.5f,	.5f,	.0f,	.0f,	.0f,
+		-.5f,	-.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
+		-.5f,	.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
+		.5f,	.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
+		.5f,	-.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
 		0.0f,	0.0f,	1.0f,	1.0f,	.5f,	.0f,	.0f,	.0f,	.0f,
     };
 
@@ -129,12 +129,11 @@ int main(){
     glBindVertexArray(0); // Unbind VAO
 
 
-#define BOIDS 200
+#define BOIDS 600
 
 	Flock flock;
 	flock.init_boids(BOIDS);
 
-	
 
 	
 	glEnable(GL_DEPTH_TEST);  
@@ -149,7 +148,7 @@ int main(){
 		flock.update();
 
         // Clear the colorbuffer
-        glClearColor(0.0f, 0.2f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
         glUseProgram(shaderProgram);
