@@ -134,25 +134,11 @@ void Flock::repulsionForce(){
 void Flock::boxForce(){
 	//TODO : delete elements out of the box, with a small margin to make sure they don't "jump" out of the box
 	
-	float const dist_to_box = 5.0f;
-
-
 	for(auto &b: boids){
-		glm::vec3 tmp(0.0f);
-		for(int dimension(0); dimension<3; dimension++){
-			if(glm::abs(b.pos[dimension] - box_size) < dist_to_box){
-				glm::vec3 wallRepulsionForce(0.0f);
-				wallRepulsionForce[dimension] = -1/glm::abs(b.pos[dimension] - box_size);
-				tmp += wallRepulsionForce;
-			}
-			else if(glm::abs(b.pos[dimension] + box_size) < dist_to_box){
-				glm::vec3 wallRepulsionForce(0.0f);
-				
-				wallRepulsionForce[dimension] = 1/glm::abs(b.pos[dimension] - box_size);
-				tmp += wallRepulsionForce;
-			}
+		float const dist = (glm::length(b.pos)-box_size);
+		if(glm::length(b.pos) > box_size){
+			b.accel += wallRepulsionRate * (-glm::normalize(b.pos) * dist);
 		}
-		b.accel = b.accel * .5f +  wallRepulsionRate * tmp;
 	}
 }
 
@@ -195,8 +181,8 @@ void Flock::update(){
 
 	coherenceForce();
 	repulsionForce();
-	boxForce();
 	speedRegulationForce();
+	boxForce();
 
 	for(auto &b: boids){
 		b.update(.15);

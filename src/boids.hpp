@@ -43,7 +43,7 @@ class Boid{
 class Flock{
 	private:
 		//TODO: change names
-		inline static float separationRate = .4f;
+		inline static float separationRate = 1.f;
 		inline static float wallRepulsionRate = 10*separationRate;  
 		inline static float perceptionDistance = 10.0f; //units
 		inline static float repulsionDistance = 1.f; //units

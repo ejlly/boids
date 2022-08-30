@@ -129,7 +129,7 @@ int main(){
     glBindVertexArray(0); // Unbind VAO
 
 
-#define BOIDS 100
+#define BOIDS 200
 
 	Flock flock;
 	flock.init_boids(BOIDS);
