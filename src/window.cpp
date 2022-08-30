@@ -129,16 +129,13 @@ int main(){
     glBindVertexArray(0); // Unbind VAO
 
 
-#define BOIDS 200
+#define BOIDS 100
 
 	Flock flock;
 	flock.init_boids(BOIDS);
 
 	
 
-	GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-	GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-	GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 	
 	glEnable(GL_DEPTH_TEST);  
 
@@ -152,7 +149,7 @@ int main(){
 		flock.update();
 
         // Clear the colorbuffer
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.2f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
         glUseProgram(shaderProgram);
@@ -168,6 +165,9 @@ int main(){
 		glm::mat4 projection = getProjectionMatrix();
 
 
+	GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+	GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+	GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 
 		
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));

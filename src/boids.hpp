@@ -20,12 +20,15 @@ class Boid{
 		inline static glm::vec3 const asset_orientation = glm::vec3(0.0f, 0.f, 1.0f);
 	
 	public:
+		inline static float const v0 = 0.5f;
+		inline static float const maxV = 5.0f;
 
 		glm::vec3 pos;
 		glm::vec3 speed;
 		glm::vec3 accel;
 
-		glm::vec3 new_dir;
+		glm::vec3 steerTwds;
+
 
 		Boid();
 		float const distance(Boid const &b);
@@ -40,19 +43,21 @@ class Boid{
 class Flock{
 	private:
 		//TODO: change names
-		inline static float coherenceRate = .1f;
 		inline static float separationRate = .4f;
-		inline static float wallRepulsionRate = 2*separationRate;  
-		inline static float perceptionDistance = 5.0f; //units
-		inline static float repulsionDistance = 2.f; //units
-		inline static float box_size = 20.0f; //must be bigger than 1.0f
+		inline static float wallRepulsionRate = 10*separationRate;  
+		inline static float perceptionDistance = 10.0f; //units
+		inline static float repulsionDistance = 1.f; //units
+		inline static float box_size = 30.0f; //must be bigger than 1.0f
 		std::list<Boid> boids;
 		
-		void coherenceModifier(float* distance_array);
-		void repulsionModifier();
-		void boxModifier();
+		void coherenceForce();
+		void repulsionForce();
+		void boxForce();
+		void speedRegulationForce();
 
 	public:
+		inline static float coherenceRate = 0.04f;
+
 		void add_boid();
 		void init_boids(int nbBoids);
 		unsigned int size();
