@@ -1,7 +1,7 @@
 #ifndef BOIDS_HPP
 #define BOIDS_HPP
 
-#include <list>
+//#include <list>
 
 // GFLW
 #include <GLFW/glfw3.h>
@@ -27,8 +27,6 @@ class Boid{
 		glm::vec3 speed;
 		glm::vec3 accel;
 
-		glm::vec3 steerTwds;
-
 
 		Boid();
 		float const distance(Boid const &b);
@@ -40,6 +38,8 @@ class Boid{
 
 };
 
+#define MAX_BOIDS 10000
+
 class Flock{
 	private:
 		//TODO: change names
@@ -48,7 +48,8 @@ class Flock{
 		inline static float perceptionDistance = 15.0f; //units
 		inline static float repulsionDistance = 1.f; //units
 		inline static float box_size = 60.0f; //must be bigger than 1.0f
-		std::list<Boid> boids;
+		Boid boids[MAX_BOIDS];
+		unsigned int m_size;
 		
 		void coherenceForce();
 		void repulsionForce();
@@ -58,12 +59,13 @@ class Flock{
 	public:
 		inline static float coherenceRate = 0.14f;
 
-		void add_boid();
-		void init_boids(int nbBoids);
+		bool add_boid();
+		void init_boids(unsigned int nbBoids);
 		unsigned int size();
-		std::list<Boid>::iterator begin();
 		
 		void update();
+
+		Boid& operator[](int i);
 };
 
 #endif

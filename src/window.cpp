@@ -137,6 +137,8 @@ int main(){
 
 	
 	glEnable(GL_DEPTH_TEST);  
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Game loop
     while (!glfwWindowShouldClose(window)){
@@ -172,11 +174,10 @@ int main(){
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 		
-		auto it = flock.begin();
-		for(int i(0); i<flock.size(); i++, it++){
+		for(int i(0); i<flock.size(); i++){
 
 			glm::mat4 model(1.0f);
-			it->get_model(model);
+			flock[i].get_model(model);
 
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			//Draw the structure

@@ -10,7 +10,6 @@ Boid::Boid(){
 	pos = glm::vec3(0.0f);
 	speed = glm::vec3(0.0f);
 	accel = glm::vec3(0.0f);
-	steerTwds = glm::vec3(0.0f);
 }
 
 float const Boid::distance(Boid const &b){
@@ -38,7 +37,6 @@ void Boid::update(float time){
 
 
 	accel = glm::vec3(0.0f);
-	steerTwds = glm::vec3(0.0f);
 }
 
 void Boid::get_model(glm::mat4 &model){
@@ -49,50 +47,44 @@ void Boid::get_model(glm::mat4 &model){
 }
 
 void Flock::coherenceForce(){
-	int const n = boids.size();
+	int const n = m_size;
 	
-	auto it(boids.begin());
-
 	glm::vec3 barycenter(0.0f);
 
-	for(int i(0); i<n; i++, it++){
-		barycenter += it->pos;
-		auto it_neigh(boids.begin());
+	for(int i(0); i<n; i++){
+		barycenter += boids[i].pos;
 		int count(0);
 		glm::vec3 tmp(0.0f), bary_neigh(0.0f);
-		for(int j(0); j<n; j++, it_neigh++){
-			float const dist(it->distance(*it_neigh));
+		for(int j(0); j<n; j++){
+			float const dist(boids[i].distance(boids[j]));
 			if(i != j && dist < perceptionDistance){
-				tmp +=  it_neigh->speed;
-				bary_neigh += it_neigh->pos;
+				tmp +=  boids[j].speed;
+				bary_neigh += boids[j].pos;
 				count++;
 			}
 		}
 		
 		if(count > 0){
-			it->accel += coherenceRate * tmp/(float) count;
-			it->accel += coherenceRate * (bary_neigh/(float) count - it->pos);
+			boids[i].accel += coherenceRate * tmp/(float) count;
+			boids[i].accel += coherenceRate * (bary_neigh/(float) count - boids[i].pos);
 		}
 		else
-			it->accel += coherenceRate * (barycenter/(float) n - it->pos);
+			boids[i].accel += coherenceRate * (barycenter/(float) n - boids[i].pos);
 	}
 }
 
 void Flock::repulsionForce(){
-	int const n = boids.size();
+	int const n = m_size;
 	
-	auto it(boids.begin());
-
-	for(int i(0); i<n; i++, it++){
-		auto it_neigh(boids.begin());
-		glm::vec3 const dir = it->dir();
+	for(int i(0); i<n; i++){
+		glm::vec3 const dir = boids[i].dir();
 		glm::vec3 tmp(0.0f);
 		bool allSamePos(true);
-		for(int j(0); j<n; j++, it_neigh++){
-			float const dist(it->distance(*it_neigh));
+		for(int j(0); j<n; j++){
+			float const dist(boids[i].distance(boids[j]));
 			if(i != j && dist < repulsionDistance){
-				if(glm::any(glm::greaterThan(glm::abs(it->pos - it_neigh->pos), glm::vec3(FLT_EPSILON)))){
-					tmp +=  glm::normalize(it->pos - it_neigh->pos)/(dist*dist);
+				if(glm::any(glm::greaterThan(glm::abs(boids[i].pos - boids[j].pos), glm::vec3(FLT_EPSILON)))){
+					tmp +=  glm::normalize(boids[i].pos - boids[j].pos)/(dist*dist);
 					allSamePos = false;
 				}
 			}
@@ -101,15 +93,15 @@ void Flock::repulsionForce(){
 		}
 		if(allSamePos)
 			tmp += glm::ballRand(1.0f);
-		it->accel += tmp * separationRate;
+		boids[i].accel += tmp * separationRate;
 	}
 }
 
 void Flock::boxForce(){
-	for(auto &b: boids){
-		float const dist = (glm::length(b.pos)-box_size);
-		if(glm::length(b.pos) > box_size){
-			b.accel += wallRepulsionRate * (-glm::normalize(b.pos));
+	for(int i(0); i<m_size; i++){
+		float const dist = (glm::length(boids[i].pos)-box_size);
+		if(glm::length(boids[i].pos) > box_size){
+			boids[i].accel += wallRepulsionRate * (-glm::normalize(boids[i].pos));
 		}
 	}
 }
@@ -117,36 +109,35 @@ void Flock::boxForce(){
 void Flock::speedRegulationForce(){
 	float const naturalDecay = .05f;
 
-	for(auto &b: boids){
+	for(int i(0); i<m_size; i++){
 		glm::vec3 tmp(0.0f);
-		if(glm::all(glm::lessThan(glm::abs(b.speed), glm::vec3(FLT_EPSILON))))
-			b.accel = glm::ballRand(10.0f);
-		if(glm::length(b.speed) > Boid::v0)
-			b.accel *= (1 - naturalDecay);
+		if(glm::all(glm::lessThan(glm::abs(boids[i].speed), glm::vec3(FLT_EPSILON))))
+			boids[i].accel = glm::ballRand(10.0f);
+		if(glm::length(boids[i].speed) > Boid::v0)
+			boids[i].accel *= (1 - naturalDecay);
 		else
-			b.accel *= (1 + naturalDecay);
+			boids[i].accel *= (1 + naturalDecay);
 	}
 }
 
-void Flock::add_boid(){
-	boids.push_back(Boid());
+bool Flock::add_boid(){
+	if(m_size >= MAX_BOIDS) return false;
+	boids[m_size++] = Boid();
+	return true;
 }
 
-void Flock::init_boids(int nbBoids){
+void Flock::init_boids(unsigned int nbBoids){
+	if(nbBoids > MAX_BOIDS) nbBoids =  MAX_BOIDS;
 	for(int i(0); i<nbBoids; i++){
 		Boid tmp;
 		tmp.pos = glm::ballRand(10.0f);
 		tmp.speed = glm::ballRand(Boid::v0);
-		boids.push_back(tmp);
+		boids[m_size++] = tmp;
 	}
 }
 
 unsigned int Flock::size(){
-	return boids.size();
-}
-
-std::list<Boid>::iterator Flock::begin(){
-	return boids.begin();
+	return m_size;
 }
 
 void Flock::update(){
@@ -156,9 +147,11 @@ void Flock::update(){
 	speedRegulationForce();
 	boxForce();
 
-	for(auto &b: boids){
-		b.update(.15);
+	for(int i(0); i<m_size; i++){
+		boids[i].update(.15);
 	}
-	
+}
 
+Boid& Flock::operator[](int i){
+	return boids[i];
 }
