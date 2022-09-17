@@ -37,8 +37,8 @@ int main(){
     // Init GLFW
     glfwInit();
     // Set all the required options for GLFW
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
@@ -134,7 +134,9 @@ int main(){
 
     glBindVertexArray(0); // Unbind VAO
 
-#define BOIDS 600
+	std::cout << "OK1" << std::endl;
+
+#define BOIDS 1000
 
 	/*
 
@@ -162,7 +164,7 @@ int main(){
 		flock[i].accel[2] = tmp.accel[2];
 	}
 
-	char const compute_shader_path = "src/shaders/ComputeNaiveShader.glsl";
+	char const compute_shader_path[] = "src/shaders/ComputeNaiveShader.glsl";
 
 	//Compiling Computing shader
 	GLuint ComputeShaderID = glCreateShader(GL_COMPUTE_SHADER);
@@ -181,7 +183,7 @@ int main(){
 	GLint Result = GL_FALSE;
 	int InfoLogLength;
 
-	printf("Compiling shader : %s\n", compute_file_path);
+	printf("Compiling shader : %s\n", compute_shader_path);
 	char const * ComputeSourcePointer = ComputeShaderCode.c_str();
 	glShaderSource(ComputeShaderID, 1, &ComputeSourcePointer, nullptr);
 	glCompileShader(ComputeShaderID);
@@ -199,19 +201,22 @@ int main(){
 
 	//Linking program
 	GLuint ComputePrgm = glCreateProgram();
-	glAttachSahder(ComputePrgm, ComputeShaderID);
+	glAttachShader(ComputePrgm, ComputeShaderID);
 	glLinkProgram(ComputeShaderID);
 
 	glGetProgramiv(ComputePrgm, GL_LINK_STATUS, &Result);
 	glGetProgramiv(ComputePrgm, GL_INFO_LOG_LENGTH, &InfoLogLength);
 	if ( InfoLogLength > 0 ){
 		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
-		glGetProgramInfoLog(ProgramID, InfoLogLength, nullptr, &ProgramErrorMessage[0]);
+		glGetProgramInfoLog(ComputePrgm, InfoLogLength, nullptr, &ProgramErrorMessage[0]);
 		printf("%s\n", &ProgramErrorMessage[0]);
 	}
 
 	glDetachShader(ComputePrgm, ComputeShaderID);
 	glDeleteShader(ComputeShaderID);
+
+
+	std::cout << "OK : created shader" << std::endl;
 
 	//Boids buffer
 	GLuint boidsBuf;
@@ -222,7 +227,9 @@ int main(){
 
 	
 	glUseProgram(ComputePrgm);
-	GLuint groups = max((GLuint) (BOIDS/(float) invocations), 1);
+	GLuint nbUnits = BOIDS/2048.f;
+	GLuint groups = 1;
+	if(nbUnits > groups) groups = nbUnits;
 
 	GLint v0Loc = glGetUniformLocation(ComputePrgm, "v0");
 	GLint maxVLoc = glGetUniformLocation(ComputePrgm, "maxV");
@@ -237,17 +244,47 @@ int main(){
 	glUniform1f(v0Loc, 5.0f);
 	glUniform1f(maxVLoc, 7.0f);
 	glUniform1f(separationRateLoc, 13.f);
-	glUniform1f(wallRepulstionRateLoc, 1.0f);
+	glUniform1f(wallRepulsionRateLoc, 1.0f);
 	glUniform1f(perceptionDistanceLoc, 15.0f);
 	glUniform1f(repulsionDistanceLoc, 1.f);
 	glUniform1f(box_sizeLoc, 60.0f);
 	glUniform1f(coherenceRateLoc, .14f);
 	glUniform1ui(sizeLoc, BOIDS);
 
-	
+	std::cout << "OK : uniformed everything" << std::endl;
+
+
 	glEnable(GL_DEPTH_TEST);  
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	GpuBoid *gpuFlock = nullptr;
+
+	std::cout << "OK : in game loop" << std::endl;
+
+	int work_grp_cnt[3];
+
+	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
+	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
+	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
+
+	printf("max global (total) work group counts x:%i y:%i z:%i\n",
+	  work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
+
+	int work_grp_size[3];
+
+	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
+	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
+	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
+
+	printf("max local (in one shader) work group sizes x:%i y:%i z:%i\n",
+	  work_grp_size[0], work_grp_size[1], work_grp_size[2]);
+	
+
+	GLint work_grp_inv = 0;
+
+	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
+	printf("max local work group invocations %i\n", work_grp_inv);
 
     // Game loop
     while (!glfwWindowShouldClose(window)){
@@ -259,14 +296,26 @@ int main(){
 		
 		//Update flock
 		//flock.update();
-			//1.Calculate barycenter
-		glm::vec3 barycenter
 		glUseProgram(ComputePrgm);
+			//1.Calculate barycenter
+		glm::vec3 barycenter(0.0f);
+		if(gpuFlock){
+			for(int i(0); i<BOIDS; i++){
+				barycenter.x += gpuFlock[i].pos[0];
+				barycenter.y += gpuFlock[i].pos[1];
+				barycenter.z += gpuFlock[i].pos[2];
+			}
+			barycenter = barycenter / (float) BOIDS;
+
+			GLint barycenterLoc = glGetUniformLocation(ComputePrgm, "barycenter");
+			glUniform3fv(barycenterLoc, 1, &barycenter[0]);
+		}
+
 		glDispatchCompute(groups, 1, 1);
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
-		GpuBoid *gpuFlock = (GpuBoid*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+		gpuFlock = (GpuBoid*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
         // Clear the colorbuffer
@@ -297,7 +346,7 @@ int main(){
 		for(int i(0); i<BOIDS; i++){
 			Boid cur(gpuFlock[i]);
 
-			cur.update(.15f); //Delta_T of simulation
+			cur.update(.05f); //Delta_T of simulation
 
 			gpuFlock[i].pos[0] = cur.pos[0];
 			gpuFlock[i].pos[1] = cur.pos[1];
@@ -311,6 +360,8 @@ int main(){
 			gpuFlock[i].accel[1] = cur.accel[1];
 			gpuFlock[i].accel[2] = cur.accel[2];
 
+			//std::cout << cur.accel[0] << " " << cur.accel[1] << " " << cur.accel[2] << std::endl;
+
 			glm::mat4 model(1.0f);
 			cur.get_model(model);
 
@@ -319,7 +370,7 @@ int main(){
 			glBindVertexArray(VAOs[0]);
 			glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
-defiance
+
 			glBindVertexArray(VAOs[1]);
 			glDrawElements(GL_LINES, 18, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -332,7 +383,7 @@ defiance
     glDeleteVertexArrays(2, VAOs);
     glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(2, EBOs);
-	glDeleteBuffers(1, boidsBuf);
+	glDeleteBuffers(1, &boidsBuf);
     // Terminate GLFW, clearing any resources allocated by GLFW.
     glfwTerminate();
     return 0;

@@ -1,6 +1,7 @@
-#version 431
+#version 430
 
 #define FLT_EPSILON (.00000001f)
+#define SEED (17665236)
 
 //only calculates sum of forces
 uniform vec3 barycenter;
@@ -17,7 +18,7 @@ uniform float coherenceRate;
 
 uniform uint size;
 
-layout(local_size = 1024) in;
+layout(local_size_x = 1024) in;
 
 struct inputBoid{
 	float pos[3];
@@ -34,14 +35,16 @@ struct Boid{
 
 layout(std430, binding = 0) buffer boidBuffer{
 	inputBoid boids[];
-}
+};
 
 
-Boid inputBoid_to_Boid(inputBoid input){
+Boid inputBoid_to_Boid(inputBoid inBoid){
 	Boid boid;
-	boid.pos = vec3(input.pos[0], input.pos[1], input.pos[2]);
-	boid.speed = vec3(input.speed[0], input.speed[1], input.speed[2]);
-	boid.accel = vec3(input.accel[0], input.accel[1], input.accel[2]);
+	boid.pos = vec3(inBoid.pos[0], inBoid.pos[1], inBoid.pos[2]);
+	boid.speed = vec3(inBoid.speed[0], inBoid.speed[1], inBoid.speed[2]);
+	boid.accel = vec3(inBoid.accel[0], inBoid.accel[1], inBoid.accel[2]);
+	
+	return boid;
 }
 
 void Boid_to_buffer(Boid boid, uint id){
@@ -63,7 +66,6 @@ void main(void){
 
 	if(gid < size){
 		Boid curBoid = inputBoid_to_Boid(boids[gid]);
-
 		int count_coherence = 0;
 		vec3 tmp_coherence = vec3(0.0f);
 		vec3 tmp_repulsion = vec3(0.0f);
@@ -73,7 +75,7 @@ void main(void){
 
 		for(int i = 1; i<size; i++){
 			Boid neighBoid = inputBoid_to_Boid(boids[(gid+i) % size]);
-			float const dist = distance(curBoid, neighBoid);
+			float dist = distance(curBoid.pos, neighBoid.pos);
 
 			//coherence
 			if(i != gid && dist < perceptionDistance){
@@ -91,40 +93,38 @@ void main(void){
 				else
 					if(i != gid) allSamePos = false;
 			}
-
-	
-		
 		}
 		
 		//coherence
 		if(count_coherence > 0){
-			curBoid.accel += coherenceRate * tmp_coherence/(float) count_coherence;
-			curBoid.accel += coherenceRate * (bary_neigh/(float) count_coherence - curBoid.pos);
+			curBoid.accel += coherenceRate * tmp_coherence/count_coherence;
+			curBoid.accel += coherenceRate * (bary_neigh/count_coherence - curBoid.pos);
 		}
 		else
-			curBoid.accel += coherenceRate * (barycenter/(float) n - curBoid.pos);
+			curBoid.accel += coherenceRate * (barycenter/size - curBoid.pos);
 
 		//repulsion
 		if(allSamePos)
-			tmp_repulsion += ballRand(1.0f);
+			//tmp_repulsion += ballRand(1.0f);
+			tmp_repulsion += vec3(1.0f);
 
 		curBoid.accel = separationRate * tmp_repulsion;
 
 		//speeedRegulationForce
-		float const naturalDecay = .05f;
+		float naturalDecay = .05f;
 		if(all(lessThan(abs(curBoid.speed), vec3(FLT_EPSILON))))
-			curBoid.accel = ballRand(10.0f);
-		if(length(curBoid.speed) > )
-			curBoid.accel *= (1 - naturalDecay);
+			//curBoid.accel = ballRand(10.0f);
+			curBoid.accel = vec3(10.0f);
+		if(length(curBoid.speed) > v0)
+			curBoid.accel *= 1 - naturalDecay;
 		else
-			curBoid.accel *= (1 + naturalDecay);
+			curBoid.accel *= 1 + naturalDecay;
 
 		//boxForce
-		float const dist_to_box = length(curBoid.pos) - box_size;
+		float dist_to_box = length(curBoid.pos) - box_size;
 		if(length(curBoid.pos) > box_size)
 			curBoid.accel += wallRepulsionRate * (-normalize(curBoid.pos));
 
-
-		Boid_to_buffer(curBoid, id);
+		Boid_to_buffer(curBoid, gid);
 	}
 }

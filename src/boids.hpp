@@ -16,9 +16,9 @@
 float anglef(glm::vec3 const &a, glm::vec3 const &b);
 
 struct GpuBoid{
-	float[3] pos;
-	float[3] speed;
-	float[3] accel;
+	float pos[3];
+	float speed[3];
+	float accel[3];
 };
 
 
@@ -37,7 +37,7 @@ class Boid{
 
 
 		Boid();
-		Boid(gpuBoid tmpboid);
+		Boid(GpuBoid tmpboid);
 		float const distance(Boid const &b);
 		glm::vec3 const dir();
 
