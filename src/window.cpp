@@ -1,5 +1,11 @@
 #include <iostream>
 #include <stdlib.h>
+#include <fstream>
+#include <algorithm>
+#include <sstream>
+
+#include <stdlib.h>
+#include <string.h>
 
 // GLEW
 #define GLEW_STATIC
@@ -128,12 +134,115 @@ int main(){
 
     glBindVertexArray(0); // Unbind VAO
 
-
 #define BOIDS 600
+
+	/*
 
 	Flock flock;
 	flock.init_boids(BOIDS);
 
+	*/
+	
+	GpuBoid flock[BOIDS];
+	for(int i(0); i<BOIDS; i++){
+		Boid tmp;
+		tmp.pos = glm::ballRand(10.0f);
+		tmp.speed = glm::ballRand(Boid::v0);
+
+		flock[i].pos[0] = tmp.pos[0];
+		flock[i].pos[1] = tmp.pos[1];
+		flock[i].pos[2] = tmp.pos[2];
+
+		flock[i].speed[0] = tmp.speed[0];
+		flock[i].speed[1] = tmp.speed[1];
+		flock[i].speed[2] = tmp.speed[2];
+
+		flock[i].accel[0] = tmp.accel[0];
+		flock[i].accel[1] = tmp.accel[1];
+		flock[i].accel[2] = tmp.accel[2];
+	}
+
+	char const compute_shader_path = "src/shaders/ComputeNaiveShader.glsl";
+
+	//Compiling Computing shader
+	GLuint ComputeShaderID = glCreateShader(GL_COMPUTE_SHADER);
+	std::string ComputeShaderCode;
+	std::ifstream ComputeShaderStream(compute_shader_path, std::ios::in);
+	if(ComputeShaderStream.is_open()){
+		std::stringstream sstr;
+		sstr << ComputeShaderStream.rdbuf();
+		ComputeShaderCode = sstr.str();
+		ComputeShaderStream.close();
+	}
+	else{
+		printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", compute_shader_path);
+	}
+
+	GLint Result = GL_FALSE;
+	int InfoLogLength;
+
+	printf("Compiling shader : %s\n", compute_file_path);
+	char const * ComputeSourcePointer = ComputeShaderCode.c_str();
+	glShaderSource(ComputeShaderID, 1, &ComputeSourcePointer, nullptr);
+	glCompileShader(ComputeShaderID);
+
+	// Check Vertex Shader
+	glGetShaderiv(ComputeShaderID, GL_COMPILE_STATUS, &Result);
+	glGetShaderiv(ComputeShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if (InfoLogLength > 0 ){
+		std::vector<char> ComputeShaderErrorMessage(InfoLogLength+1);
+		glGetShaderInfoLog(ComputeShaderID, InfoLogLength, nullptr, &ComputeShaderErrorMessage[0]);
+		printf("%s\n", &ComputeShaderErrorMessage[0]);
+	}
+
+
+
+	//Linking program
+	GLuint ComputePrgm = glCreateProgram();
+	glAttachSahder(ComputePrgm, ComputeShaderID);
+	glLinkProgram(ComputeShaderID);
+
+	glGetProgramiv(ComputePrgm, GL_LINK_STATUS, &Result);
+	glGetProgramiv(ComputePrgm, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if ( InfoLogLength > 0 ){
+		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
+		glGetProgramInfoLog(ProgramID, InfoLogLength, nullptr, &ProgramErrorMessage[0]);
+		printf("%s\n", &ProgramErrorMessage[0]);
+	}
+
+	glDetachShader(ComputePrgm, ComputeShaderID);
+	glDeleteShader(ComputeShaderID);
+
+	//Boids buffer
+	GLuint boidsBuf;
+	glGenBuffers(1, &boidsBuf);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, BOIDS * sizeof(GpuBoid), flock, GL_DYNAMIC_COPY);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	
+	glUseProgram(ComputePrgm);
+	GLuint groups = max((GLuint) (BOIDS/(float) invocations), 1);
+
+	GLint v0Loc = glGetUniformLocation(ComputePrgm, "v0");
+	GLint maxVLoc = glGetUniformLocation(ComputePrgm, "maxV");
+	GLint separationRateLoc = glGetUniformLocation(ComputePrgm, "separationRate");
+	GLint wallRepulsionRateLoc = glGetUniformLocation(ComputePrgm, "wallRepulsionRate");
+	GLint perceptionDistanceLoc = glGetUniformLocation(ComputePrgm, "perceptionDistance");
+	GLint repulsionDistanceLoc = glGetUniformLocation(ComputePrgm, "repulsionDistance");
+	GLint box_sizeLoc = glGetUniformLocation(ComputePrgm, "box_size");
+	GLint coherenceRateLoc = glGetUniformLocation(ComputePrgm, "coherenceRate");
+	GLint sizeLoc = glGetUniformLocation(ComputePrgm, "size");
+
+	glUniform1f(v0Loc, 5.0f);
+	glUniform1f(maxVLoc, 7.0f);
+	glUniform1f(separationRateLoc, 13.f);
+	glUniform1f(wallRepulstionRateLoc, 1.0f);
+	glUniform1f(perceptionDistanceLoc, 15.0f);
+	glUniform1f(repulsionDistanceLoc, 1.f);
+	glUniform1f(box_sizeLoc, 60.0f);
+	glUniform1f(coherenceRateLoc, .14f);
+	glUniform1ui(sizeLoc, BOIDS);
 
 	
 	glEnable(GL_DEPTH_TEST);  
@@ -147,7 +256,18 @@ int main(){
 		GLfloat timeValue = glfwGetTime();
 
 		computeMatricesFromInputs();
-		flock.update();
+		
+		//Update flock
+		//flock.update();
+			//1.Calculate barycenter
+		glm::vec3 barycenter
+		glUseProgram(ComputePrgm);
+		glDispatchCompute(groups, 1, 1);
+		glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
+		GpuBoid *gpuFlock = (GpuBoid*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
         // Clear the colorbuffer
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -166,25 +286,40 @@ int main(){
 		glm::mat4 projection = getProjectionMatrix();
 
 
-	GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-	GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-	GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+		GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+		GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+		GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 
 		
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 		
-		for(int i(0); i<flock.size(); i++){
+		for(int i(0); i<BOIDS; i++){
+			Boid cur(gpuFlock[i]);
+
+			cur.update(.15f); //Delta_T of simulation
+
+			gpuFlock[i].pos[0] = cur.pos[0];
+			gpuFlock[i].pos[1] = cur.pos[1];
+			gpuFlock[i].pos[2] = cur.pos[2];
+
+			gpuFlock[i].speed[0] = cur.speed[0];
+			gpuFlock[i].speed[1] = cur.speed[1];
+			gpuFlock[i].speed[2] = cur.speed[2];
+
+			gpuFlock[i].accel[0] = cur.accel[0];
+			gpuFlock[i].accel[1] = cur.accel[1];
+			gpuFlock[i].accel[2] = cur.accel[2];
 
 			glm::mat4 model(1.0f);
-			flock[i].get_model(model);
+			cur.get_model(model);
 
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			//Draw the structure
 			glBindVertexArray(VAOs[0]);
 			glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
-
+defiance
 			glBindVertexArray(VAOs[1]);
 			glDrawElements(GL_LINES, 18, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -197,6 +332,7 @@ int main(){
     glDeleteVertexArrays(2, VAOs);
     glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(2, EBOs);
+	glDeleteBuffers(1, boidsBuf);
     // Terminate GLFW, clearing any resources allocated by GLFW.
     glfwTerminate();
     return 0;

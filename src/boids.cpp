@@ -12,6 +12,12 @@ Boid::Boid(){
 	accel = glm::vec3(0.0f);
 }
 
+Boid::Boid(GpuBoid tmpboid){
+	pos = vec3(tmpboid.pos[0], tmpboid.pos[1], tmpboid.pos[2]);
+	speed = vec3(tmpboid.speed[0], tmpboid.speed[1], tmpboid.speed[2]);
+	accel = vec3(tmpboid.accel[0], tmpboid.accel[1], tmpboid.accel[2]);
+}
+
 float const Boid::distance(Boid const &b){
 	return glm::distance(b.pos, pos);
 }

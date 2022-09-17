@@ -15,6 +15,14 @@
 
 float anglef(glm::vec3 const &a, glm::vec3 const &b);
 
+struct GpuBoid{
+	float[3] pos;
+	float[3] speed;
+	float[3] accel;
+};
+
+
+
 class Boid{
 	private:
 		inline static glm::vec3 const asset_orientation = glm::vec3(0.0f, 0.f, 1.0f);
@@ -29,6 +37,7 @@ class Boid{
 
 
 		Boid();
+		Boid(gpuBoid tmpboid);
 		float const distance(Boid const &b);
 		glm::vec3 const dir();
 
