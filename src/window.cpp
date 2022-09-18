@@ -38,7 +38,7 @@ int main(){
     glfwInit();
     // Set all the required options for GLFW
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
@@ -134,8 +134,6 @@ int main(){
 
     glBindVertexArray(0); // Unbind VAO
 
-	std::cout << "OK1" << std::endl;
-
 #define BOIDS 1000
 
 	/*
@@ -146,10 +144,14 @@ int main(){
 	*/
 	
 	GpuBoid flock[BOIDS];
+	Boid mem_flock[BOIDS];
 	for(int i(0); i<BOIDS; i++){
 		Boid tmp;
 		tmp.pos = glm::ballRand(10.0f);
+		//if(i < 10) std::cout << tmp.pos.x << ";";
 		tmp.speed = glm::ballRand(Boid::v0);
+		tmp.speed = glm::vec3(.00001f);
+		tmp.accel = glm::vec3(1.0f);
 
 		flock[i].pos[0] = tmp.pos[0];
 		flock[i].pos[1] = tmp.pos[1];
@@ -159,10 +161,15 @@ int main(){
 		flock[i].speed[1] = tmp.speed[1];
 		flock[i].speed[2] = tmp.speed[2];
 
-		flock[i].accel[0] = tmp.accel[0];
-		flock[i].accel[1] = tmp.accel[1];
-		flock[i].accel[2] = tmp.accel[2];
+		if(i < 10) std::cout << tmp.accel.x << ";";
+
+		flock[i].accel[0] = .0f;
+		flock[i].accel[1] = .0f;
+		flock[i].accel[2] = .0f;
+
 	}
+	
+	std::cout << std::endl;
 
 	char const compute_shader_path[] = "src/shaders/ComputeNaiveShader.glsl";
 
@@ -201,6 +208,7 @@ int main(){
 
 	//Linking program
 	GLuint ComputePrgm = glCreateProgram();
+	printf("Linking program\n");
 	glAttachShader(ComputePrgm, ComputeShaderID);
 	glLinkProgram(ComputeShaderID);
 
@@ -216,18 +224,18 @@ int main(){
 	glDeleteShader(ComputeShaderID);
 
 
-	std::cout << "OK : created shader" << std::endl;
 
 	//Boids buffer
 	GLuint boidsBuf;
 	glGenBuffers(1, &boidsBuf);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, boidsBuf);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, BOIDS * sizeof(GpuBoid), flock, GL_DYNAMIC_COPY);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	
 	glUseProgram(ComputePrgm);
-	GLuint nbUnits = BOIDS/2048.f;
+	GLuint nbUnits = BOIDS/1024;
 	GLuint groups = 1;
 	if(nbUnits > groups) groups = nbUnits;
 
@@ -251,14 +259,12 @@ int main(){
 	glUniform1f(coherenceRateLoc, .14f);
 	glUniform1ui(sizeLoc, BOIDS);
 
-	std::cout << "OK : uniformed everything" << std::endl;
-
 
 	glEnable(GL_DEPTH_TEST);  
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	GpuBoid *gpuFlock = nullptr;
+	float *gpuFlock = nullptr;
 
 	std::cout << "OK : in game loop" << std::endl;
 
@@ -286,6 +292,15 @@ int main(){
 	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
 	printf("max local work group invocations %i\n", work_grp_inv);
 
+
+
+	//Find where binding is : 
+	/*
+	GLuint block_index = glGetProgramResourceIndex(ComputePrgm, GL_SHADER_STORAGE_BLOCK, "boidBuffer");
+	GLuint ssbo_binding_point_index = 2;
+	glShaderStorageBlockBinding(ComputePrgm, block_index, ssbo_binding_point_index);
+	*/
+
     // Game loop
     while (!glfwWindowShouldClose(window)){
         // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
@@ -294,6 +309,7 @@ int main(){
 
 		computeMatricesFromInputs();
 		
+		//std::cout << "uguy\n";
 		//Update flock
 		//flock.update();
 		glUseProgram(ComputePrgm);
@@ -301,22 +317,72 @@ int main(){
 		glm::vec3 barycenter(0.0f);
 		if(gpuFlock){
 			for(int i(0); i<BOIDS; i++){
-				barycenter.x += gpuFlock[i].pos[0];
-				barycenter.y += gpuFlock[i].pos[1];
-				barycenter.z += gpuFlock[i].pos[2];
+			//	barycenter.x += gpuFlock[i].pos[0];
+			//	barycenter.y += gpuFlock[i].pos[1];
+			//	barycenter.z += gpuFlock[i].pos[2];
 			}
-			barycenter = barycenter / (float) BOIDS;
+			barycenter = barycenter/(float) BOIDS;
 
 			GLint barycenterLoc = glGetUniformLocation(ComputePrgm, "barycenter");
 			glUniform3fv(barycenterLoc, 1, &barycenter[0]);
 		}
 
-		glDispatchCompute(groups, 1, 1);
+		glDispatchCompute(2, 1, 1);
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
+		GLsync fenceSync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, NULL);
+
+		glClientWaitSync(fenceSync, 0, 0);
+
+		//std::cout << "azzadazazguy\n";
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
-		gpuFlock = (GpuBoid*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+		gpuFlock = (float*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+		if(!gpuFlock){
+			std::cout << "fuuuu\n";
+			int error = glGetError();
+			std::cout << "error : " << error << std::endl;
+			std::cout << "GL_INVALID_ENUM : " << GL_INVALID_ENUM << std::endl;
+			std::cout << "GL_INVALID_OPERATION : " << GL_INVALID_OPERATION << std::endl;
+			std::cout << "GL_INVALID_VALUE : " << GL_INVALID_VALUE << std::endl;
+		}
+		for(int i(0); i<BOIDS; i++){
+			
+			std::cout << gpuFlock[9*i + 0] << ";";
+			std::cout << gpuFlock[9*i + 1] << ";";
+			std::cout << gpuFlock[9*i + 2] << ";";
+			std::cout << gpuFlock[9*i + 3] << ";";
+			std::cout << gpuFlock[9*i + 4] << ";";
+			std::cout << gpuFlock[9*i + 5] << ";";
+			std::cout << gpuFlock[9*i + 6] << ";";
+			std::cout << gpuFlock[9*i + 7] << ";";
+			std::cout << gpuFlock[9*i + 8] << ";";
+			std::cout << std::endl;
+			//std::cout << "zaodhazuidz : " << i << std::endl;
+			/*
+			mem_flock[i] = Boid();
+			
+			
+			mem_flock[i].update(.05f); //Delta_T of simulation
+
+			gpuFlock[i].pos[0] = mem_flock[i].pos[0];
+			gpuFlock[i].pos[1] = mem_flock[i].pos[1];
+			gpuFlock[i].pos[2] = mem_flock[i].pos[2];
+
+			gpuFlock[i].speed[0] = mem_flock[i].speed[0];
+			gpuFlock[i].speed[1] = mem_flock[i].speed[1];
+			gpuFlock[i].speed[2] = mem_flock[i].speed[2];
+
+			gpuFlock[i].accel[0] = mem_flock[i].accel[0];
+			gpuFlock[i].accel[1] = mem_flock[i].accel[1];
+			gpuFlock[i].accel[2] = mem_flock[i].accel[2];
+			*/
+			//std::cout << mem_flock[i].speed[0] << " " << mem_flock[i].speed[1] << " " << mem_flock[i].speed[2] << std::endl;
+
+		}
+		//glUnmapNamedBuffer(boidsBuf);
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		std::cout << "ok1 : " << std::endl;
 
         // Clear the colorbuffer
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -343,27 +409,13 @@ int main(){
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 		
+		//std::cout << "ok2 : " << std::endl;
 		for(int i(0); i<BOIDS; i++){
-			Boid cur(gpuFlock[i]);
-
-			cur.update(.05f); //Delta_T of simulation
-
-			gpuFlock[i].pos[0] = cur.pos[0];
-			gpuFlock[i].pos[1] = cur.pos[1];
-			gpuFlock[i].pos[2] = cur.pos[2];
-
-			gpuFlock[i].speed[0] = cur.speed[0];
-			gpuFlock[i].speed[1] = cur.speed[1];
-			gpuFlock[i].speed[2] = cur.speed[2];
-
-			gpuFlock[i].accel[0] = cur.accel[0];
-			gpuFlock[i].accel[1] = cur.accel[1];
-			gpuFlock[i].accel[2] = cur.accel[2];
 
 			//std::cout << cur.accel[0] << " " << cur.accel[1] << " " << cur.accel[2] << std::endl;
 
 			glm::mat4 model(1.0f);
-			cur.get_model(model);
+			mem_flock[i].get_model(model);
 
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			//Draw the structure
@@ -375,6 +427,7 @@ int main(){
 			glDrawElements(GL_LINES, 18, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
+		//std::cout << "ok3 : " << std::endl;
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);

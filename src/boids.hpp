@@ -15,7 +15,7 @@
 
 float anglef(glm::vec3 const &a, glm::vec3 const &b);
 
-struct GpuBoid{
+struct __attribute__((__packed__)) GpuBoid{
 	float pos[3];
 	float speed[3];
 	float accel[3];

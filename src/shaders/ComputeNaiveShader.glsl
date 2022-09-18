@@ -1,8 +1,8 @@
 #version 430
 
 #define FLT_EPSILON (.00000001f)
-#define SEED (17665236)
 
+layout(local_size_x = 1024) in;
 //only calculates sum of forces
 uniform vec3 barycenter;
 
@@ -18,7 +18,6 @@ uniform float coherenceRate;
 
 uniform uint size;
 
-layout(local_size_x = 1024) in;
 
 struct inputBoid{
 	float pos[3];
@@ -33,28 +32,22 @@ struct Boid{
 };
 
 
-layout(std430, binding = 0) buffer boidBuffer{
+layout(std430, binding = 0) coherent buffer boidBuffer{
 	inputBoid boids[];
 };
 
 
 Boid inputBoid_to_Boid(inputBoid inBoid){
 	Boid boid;
+
 	boid.pos = vec3(inBoid.pos[0], inBoid.pos[1], inBoid.pos[2]);
 	boid.speed = vec3(inBoid.speed[0], inBoid.speed[1], inBoid.speed[2]);
-	boid.accel = vec3(inBoid.accel[0], inBoid.accel[1], inBoid.accel[2]);
+	boid.accel = vec3(0.0f);
 	
 	return boid;
 }
 
 void Boid_to_buffer(Boid boid, uint id){
-	boids[id].pos[0] = boid.pos.x;
-	boids[id].pos[1] = boid.pos.y;
-	boids[id].pos[2] = boid.pos.z;
-
-	boids[id].speed[0] = boid.speed.x;
-	boids[id].speed[1] = boid.speed.y;
-	boids[id].speed[2] = boid.speed.z;
 
 	boids[id].accel[0] = boid.accel.x;
 	boids[id].accel[1] = boid.accel.y;
@@ -62,10 +55,14 @@ void Boid_to_buffer(Boid boid, uint id){
 }
 
 void main(void){
-	uint gid = gl_WorkGroupID.x * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
+	//uint gid = gl_WorkGroupID.x * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
+	uint gid = gl_GlobalInvocationID.x;
 
 	if(gid < size){
 		Boid curBoid = inputBoid_to_Boid(boids[gid]);
+
+		/*
+
 		int count_coherence = 0;
 		vec3 tmp_coherence = vec3(0.0f);
 		vec3 tmp_repulsion = vec3(0.0f);
@@ -116,15 +113,26 @@ void main(void){
 			//curBoid.accel = ballRand(10.0f);
 			curBoid.accel = vec3(10.0f);
 		if(length(curBoid.speed) > v0)
-			curBoid.accel *= 1 - naturalDecay;
+			curBoid.accel *= (1 - naturalDecay);
 		else
-			curBoid.accel *= 1 + naturalDecay;
+			curBoid.accel *= (1 + naturalDecay);
 
 		//boxForce
 		float dist_to_box = length(curBoid.pos) - box_size;
 		if(length(curBoid.pos) > box_size)
 			curBoid.accel += wallRepulsionRate * (-normalize(curBoid.pos));
-
-		Boid_to_buffer(curBoid, gid);
+		*/
+		curBoid.accel = vec3(1.0f);
+		//Boid_to_buffer(curBoid, gid);
+		boids[gid].accel[0] = curBoid.accel.x;
+		boids[gid].accel[1] = curBoid.accel.y;
+		boids[gid].accel[2] = curBoid.accel.z;
 	}
+	boids[gid].speed[0] = 1.0f;
+	boids[gid].speed[1] = 1.0f;
+	boids[gid].speed[2] = 1.0f;
+
+	boids[gid].accel[0] = 1.0f;
+	boids[gid].accel[1] = 1.0f;
+	boids[gid].accel[2] = 1.0f;
 }
