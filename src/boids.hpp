@@ -15,28 +15,33 @@
 
 float anglef(glm::vec3 const &a, glm::vec3 const &b);
 
-struct __attribute__((__packed__)) GpuBoid{
-	float pos[3];
-	float speed[3];
-	float accel[3];
+struct GpuBoid{
+	glm::vec3 pos;
+	float pad1;
+	glm::vec3 speed;
+	float pad2;
+	glm::vec3 accel;
+	float pad3;
 };
 
 
+inline static glm::vec3 const asset_orientation = glm::vec3(0.0f, 0.f, 1.0f);
+
+inline static float const v0 = 5.0f;
+inline static float const maxV = 7.0f;
 
 class Boid{
 	private:
-		inline static glm::vec3 const asset_orientation = glm::vec3(0.0f, 0.f, 1.0f);
 	
 	public:
-		inline static float const v0 = 5.0f;
-		inline static float const maxV = 7.0f;
 
-		glm::vec3 pos;
-		glm::vec3 speed;
-		glm::vec3 accel;
+		alignas(16) glm::vec3 pos;
+		alignas(16) glm::vec3 speed;
+		alignas(16) glm::vec3 accel;
 
 
 		Boid();
+		Boid(Boid &tmpboid);
 		Boid(GpuBoid tmpboid);
 		float const distance(Boid const &b);
 		glm::vec3 const dir();

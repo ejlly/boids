@@ -12,12 +12,27 @@ Boid::Boid(){
 	accel = glm::vec3(0.0f);
 }
 
-Boid::Boid(GpuBoid tmpboid){
-	pos = glm::vec3(tmpboid.pos[0], tmpboid.pos[1], tmpboid.pos[2]);
+Boid::Boid(Boid &tmpboid){
+	pos = tmpboid.pos;
+	//pos = glm::vec3(tmpboid.pos[0], tmpboid.pos[1], tmpboid.pos[2]);
 	//std::cout << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
-	speed = glm::vec3(tmpboid.speed[0], tmpboid.speed[1], tmpboid.speed[2]);
+	speed = tmpboid.speed;
+	//speed = glm::vec3(tmpboid.speed[0], tmpboid.speed[1], tmpboid.speed[2]);
 	//std::cout << speed[0] << " " << speed[1] << " " << speed[2] << std::endl;
-	accel = glm::vec3(tmpboid.accel[0], tmpboid.accel[1], tmpboid.accel[2]);
+	accel = tmpboid.accel;
+	//accel = glm::vec3(tmpboid.accel[0], tmpboid.accel[1], tmpboid.accel[2]);
+	//std::cout << accel[0] << " " << accel[1] << " " << accel[2] << std::endl;
+}
+
+Boid::Boid(GpuBoid tmpboid){
+	pos = tmpboid.pos;
+	//pos = glm::vec3(tmpboid.pos[0], tmpboid.pos[1], tmpboid.pos[2]);
+	//std::cout << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
+	speed = tmpboid.speed;
+	//speed = glm::vec3(tmpboid.speed[0], tmpboid.speed[1], tmpboid.speed[2]);
+	//std::cout << speed[0] << " " << speed[1] << " " << speed[2] << std::endl;
+	accel = tmpboid.accel;
+	//accel = glm::vec3(tmpboid.accel[0], tmpboid.accel[1], tmpboid.accel[2]);
 	//std::cout << accel[0] << " " << accel[1] << " " << accel[2] << std::endl;
 }
 
@@ -122,7 +137,7 @@ void Flock::speedRegulationForce(){
 		glm::vec3 tmp(0.0f);
 		if(glm::all(glm::lessThan(glm::abs(boids[i].speed), glm::vec3(FLT_EPSILON))))
 			boids[i].accel = glm::ballRand(10.0f);
-		if(glm::length(boids[i].speed) > Boid::v0)
+		if(glm::length(boids[i].speed) > v0)
 			boids[i].accel *= (1 - naturalDecay);
 		else
 			boids[i].accel *= (1 + naturalDecay);
@@ -140,7 +155,7 @@ void Flock::init_boids(unsigned int nbBoids){
 	for(int i(0); i<nbBoids; i++){
 		Boid tmp;
 		tmp.pos = glm::ballRand(10.0f);
-		tmp.speed = glm::ballRand(Boid::v0);
+		tmp.speed = glm::ballRand(v0);
 		boids[m_size++] = tmp;
 	}
 }

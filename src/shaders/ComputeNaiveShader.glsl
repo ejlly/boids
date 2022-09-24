@@ -2,7 +2,7 @@
 
 #define FLT_EPSILON (.00000001f)
 
-layout(local_size_x = 2048) in;
+layout(local_size_x = 32) in;
 //only calculates sum of forces
 uniform vec3 barycenter;
 
@@ -18,13 +18,6 @@ uniform float coherenceRate;
 
 uniform uint size;
 
-
-struct inputBoid{
-	float pos[3];
-	float speed[3];
-	float accel[3];
-};
-
 struct Boid{
 	vec3 pos;
 	vec3 speed;
@@ -34,45 +27,28 @@ struct Boid{
 
 
 layout(std430, binding = 0) coherent buffer boidBuffer{
-	inputBoid boids[];
+	Boid boids[];
 } mybuf;
 
 
-Boid inputBoid_to_Boid(inputBoid inBoid){
-	Boid boid;
-
-	boid.pos = vec3(inBoid.pos[0], inBoid.pos[1], inBoid.pos[2]);
-	boid.speed = vec3(inBoid.speed[0], inBoid.speed[1], inBoid.speed[2]);
-	boid.accel = vec3(0.0f);
-	
-	return boid;
-}
-
-void Boid_to_buffer(Boid boid, uint id){
-
-	mybuf.boids[id].accel[0] = boid.accel.x;
-	mybuf.boids[id].accel[1] = boid.accel.y;
-	mybuf.boids[id].accel[2] = boid.accel.z;
-}
 
 void main(void){
-	uint gid = gl_WorkGroupID.x * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
+	//uint gid = gl_WorkGroupID.x * gl_WorkGroupSize.x + gl_LocalInvocationID.x;
+	uint gid = gl_GlobalInvocationID.x;
 
-	//uint gid = gl_GlobalInvocationID.x;
 
 	if(gid < size){
-		Boid curBoid = inputBoid_to_Boid(mybuf.boids[gid]);
 
 		int count_coherence = 0;
 		vec3 tmp_coherence = vec3(0.0f);
 		vec3 tmp_repulsion = vec3(0.0f);
 		vec3 tmp_speedRegulationForce = vec3(0.0f);
 		vec3 bary_neigh = vec3(0.0f);
-		bool allSamePos = true;
+		//bool allSamePos = true;
 
 		for(int i = 1; i<size; i++){
-			Boid neighBoid = inputBoid_to_Boid(mybuf.boids[(gid+i) % size]);
-			float dist = distance(curBoid.pos, neighBoid.pos);
+			Boid neighBoid = mybuf.boids[(gid+i) % size];
+			float dist = distance(mybuf.boids[gid].pos, neighBoid.pos);
 
 			//coherence
 			if(i != gid && dist < perceptionDistance){
@@ -83,22 +59,24 @@ void main(void){
 
 			//repulsion
 			if(i != gid && dist < repulsionDistance){
-				if(any(greaterThan(abs(curBoid.pos - neighBoid.pos), vec3(FLT_EPSILON)))){
-					tmp_repulsion +=  normalize(curBoid.pos - neighBoid.pos)/(dist*dist);
-					allSamePos = false;
+				if(any(greaterThan(abs(mybuf.boids[gid].pos - neighBoid.pos), vec3(FLT_EPSILON)))){
+					tmp_repulsion +=  normalize(mybuf.boids[gid].pos - neighBoid.pos)/(dist*dist);
+					//allSamePos = false;
 				}
+				/*
 				else
 					if(i != gid) allSamePos = false;
+				*/
 			}
 		}
 		
 		//coherence
 		if(count_coherence > 0){
-			curBoid.accel += coherenceRate * tmp_coherence/count_coherence;
-			curBoid.accel += coherenceRate * (bary_neigh/count_coherence - curBoid.pos);
+			mybuf.boids[gid].accel += coherenceRate * tmp_coherence/count_coherence;
+			mybuf.boids[gid].accel += coherenceRate * (bary_neigh/count_coherence - mybuf.boids[gid].pos);
 		}
 		else
-			curBoid.accel += coherenceRate * (barycenter/size - curBoid.pos);
+			mybuf.boids[gid].accel += coherenceRate * (barycenter/size - mybuf.boids[gid].pos);
 		
 
 		//repulsion
@@ -106,23 +84,28 @@ void main(void){
 			//tmp_repulsion += ballRand(1.0f);
 
 
-		curBoid.accel += separationRate * tmp_repulsion;
+		mybuf.boids[gid].accel += separationRate * tmp_repulsion;
 
 		//speeedRegulationForce
 		float naturalDecay = .05f;
-		if(all(lessThan(abs(curBoid.speed), vec3(FLT_EPSILON))))
-			//curBoid.accel = ballRand(10.0f);
-			curBoid.accel = vec3(10.0f);
-		if(length(curBoid.speed) > v0)
-			curBoid.accel *= (1 - naturalDecay);
+		if(all(lessThan(abs(mybuf.boids[gid].speed), vec3(FLT_EPSILON))))
+			//mybuf.boids[gid].accel = ballRand(10.0f);
+			mybuf.boids[gid].accel = vec3(10.0f);
+		if(length(mybuf.boids[gid].speed) > v0)
+			mybuf.boids[gid].accel *= (1 - naturalDecay);
 		else
-			curBoid.accel *= (1 + naturalDecay);
+			mybuf.boids[gid].accel *= (1 + naturalDecay);
 
 		//boxForce
-		float dist_to_box = length(curBoid.pos) - box_size;
-		if(length(curBoid.pos) > box_size)
-			curBoid.accel += wallRepulsionRate * (-normalize(curBoid.pos));
+		float dist_to_box = length(mybuf.boids[gid].pos) - box_size;
+		if(length(mybuf.boids[gid].pos) > box_size)
+			mybuf.boids[gid].accel += wallRepulsionRate * (-normalize(mybuf.boids[gid].pos));
 
-		Boid_to_buffer(curBoid, gid);
+		float max_accel = 100.0f;
+
+		if(length(mybuf.boids[gid].accel) > max_accel){
+			mybuf.boids[gid].accel = max_accel * normalize(mybuf.boids[gid].accel);
+		}
+		//Boid_to_buffer(mybuf.boids[gid], gid);
 	}
 }
