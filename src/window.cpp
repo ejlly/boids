@@ -157,13 +157,14 @@ int main(){
 	
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
-		//Position				//Color Face			//Color edge
-		-.5f,	-.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
+		//Position				//Color Face			//Color edge		
+		-.5f,	-.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f, 
 		-.5f,	.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
 		.5f,	.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
 		.5f,	-.5f,	-.5f,	.0f,	.75f,	.5f,	.0f,	.0f,	.0f,
 		0.0f,	0.0f,	1.0f,	1.0f,	.5f,	.0f,	.0f,	.0f,	.0f,
     };
+
 
 	GLuint indices[] = {
 		0,	1,	2,
@@ -358,7 +359,7 @@ int main(){
 	float separationRate = 25.0f;
 	float wallRepulsionRate = 1.0f;
 	float perceptionDistance = 10.0f;
-	float repulsionDistance = 1.f;
+	float repulsionDistance = 5.f;
 	float box_size = 40.0f;
 	float coherenceRate = .15f;
 
@@ -380,7 +381,7 @@ int main(){
 	sizeLoc = glGetUniformLocation(computeUpdateBoids, "size");
 
 
-	float time = .05f;
+	float time = .09f;
 
 	glUniform1f(v0Loc, v0);
 	glUniform1f(maxVLoc, maxV);
@@ -388,7 +389,7 @@ int main(){
 	glUniform1ui(sizeLoc, BOIDS);
 
 	glEnable(GL_DEPTH_TEST);  
-	glEnable(GL_BLEND);
+	//glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	Boid *gpuFlock = nullptr;
