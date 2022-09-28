@@ -17,6 +17,8 @@ Shortly put, each boid is subjected to :
 
 - a box-keeping force, which makes it stay near the origin
 
+The flock is initialized at random at the beginning.
+
 # Controls
 
 - Use mouse and arrow keys to navigate
