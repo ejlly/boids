@@ -2,6 +2,8 @@
 
 Realtime boids simulation of 3D boids using OpenGL
 
+[!](https://user-images.githubusercontent.com/96349904/192846495-7aab3824-ebcb-49cd-b49f-850976ecbd11.mp4)
+
 # Principle
 
 We simulate boids in a 3D environment. This is based on the model made by Craig W. Reynolds (https://en.wikipedia.org/wiki/Boids).
