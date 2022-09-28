@@ -2,7 +2,7 @@
 
 Realtime boids simulation of 3D boids using OpenGL
 
-[!](https://user-images.githubusercontent.com/96349904/192846495-7aab3824-ebcb-49cd-b49f-850976ecbd11.mp4)
+![Alt Text](https://user-images.githubusercontent.com/96349904/192848075-afb932de-900c-47ed-8848-191f42e87acb.gif)
 
 # Principle
 
