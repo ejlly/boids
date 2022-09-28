@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
-project(OpenGLExample)
+project(boidsSim)
 set(CMAKE_MODULE_PATH /home/charles/Libs/cmake)
 set (CMAKE_CXX_STANDARD 17)
 
