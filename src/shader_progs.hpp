@@ -12,28 +12,46 @@ class Program{
 	public:
 		void use();
 		//floats
-		void uniform(const char *name, GLfloat v0);
-		void uniform(const char *name, GLfloat v0, GLfloat v1);
-		void uniform(const char *name, GLfloat v0, GLfloat v1, GLfloat v2);
-		void uniform(const char *name, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+		void uniformf(const char *name, GLfloat v0);
+		void uniformf(const char *name, GLfloat v0, GLfloat v1);
+		void uniformf(const char *name, GLfloat v0, GLfloat v1, GLfloat v2);
+		void uniformf(const char *name, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
 		//ints
-		void uniform(const char *name, GLint v0);
-		void uniform(const char *name, GLint v0, GLint v1);
-		void uniform(const char *name, GLint v0, GLint v1, GLint v2);
-		void uniform(const char *name, GLint v0, GLint v1, GLint v2, GLint v3);
+		void uniformi(const char *name, GLint v0);
+		void uniformi(const char *name, GLint v0, GLint v1);
+		void uniformi(const char *name, GLint v0, GLint v1, GLint v2);
+		void uniformi(const char *name, GLint v0, GLint v1, GLint v2, GLint v3);
 		//uints
-		void uniform(const char *name, GLuint v0);
-		void uniform(const char *name, GLuint v0, GLuint v1);
-		void uniform(const char *name, GLuint v0, GLuint v1, GLuint v2);
-		void uniform(const char *name, GLuint v0, GLuint v1, GLuint v2, GLuint v3);
+		void uniformui(const char *name, GLuint v0);
+		void uniformui(const char *name, GLuint v0, GLuint v1);
+		void uniformui(const char *name, GLuint v0, GLuint v1, GLuint v2);
+		void uniformui(const char *name, GLuint v0, GLuint v1, GLuint v2, GLuint v3);
 		//tabs
-		void uniform(const char *name, int dim, GLsizei count, const GLfloat* value);
-		void uniform(const char *name, int dim, GLsizei count, const GLint* value);
-		void uniform(const char *name, int dim, GLsizei count, const GLuint* value);
+		void uniform_1f(const char *name, GLsizei count, const GLfloat* value);
+		void uniform_2f(const char *name, GLsizei count, const GLfloat* value);
+		void uniform_3f(const char *name, GLsizei count, const GLfloat* value);
+		void uniform_4f(const char *name, GLsizei count, const GLfloat* value);
+
+		void uniform_1i(const char *name, GLsizei count, const GLint* value);
+		void uniform_2i(const char *name, GLsizei count, const GLint* value);
+		void uniform_3i(const char *name, GLsizei count, const GLint* value);
+		void uniform_4i(const char *name, GLsizei count, const GLint* value);
+
+		void uniform_1ui(const char *name, GLsizei count, const GLuint* value);
+		void uniform_2ui(const char *name, GLsizei count, const GLuint* value);
+		void uniform_3ui(const char *name, GLsizei count, const GLuint* value);
+		void uniform_4ui(const char *name, GLsizei count, const GLuint* value);
 		//square matrix
-		void uniform(const char *name, int dim, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_2x2(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_3x3(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_4x4(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
 		//rectangular matrix
-		void uniform(const char *name, int d1, int d2, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_2x3(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_2x4(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_3x2(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_3x4(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_4x2(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
+		void uniform_4x3(const char *name, GLsizei count, GLboolean transpose, const GLfloat *value);
 
 };
 
