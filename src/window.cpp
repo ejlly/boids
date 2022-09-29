@@ -29,6 +29,7 @@
 //Boids
 #include "boids.hpp"
 #include "keys.hpp"
+#include "shader_progs.hpp"
 
 // Function prototypes
 
@@ -153,7 +154,10 @@ int main(){
 
 
     // Build and compile our shader program
-	GLuint shaderProgram = LoadShaders("src/shaders/SimpleVertexShader.vs", "src/shaders/SimpleFragmentShader.fs");
+	char const vs[] = "src/shaders/SimpleVertexShader.vs";
+	char const fs[] = "src/shaders/SimpleFragmentShader.fs";
+	//GLuint shaderProgram = LoadShaders(vs, fs);
+	DrawingProgram shaderProgram(vs, fs);
 	
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
@@ -547,15 +551,21 @@ int main(){
 		glm::mat4 projection = getProjectionMatrix();
 
 
-        glUseProgram(shaderProgram);
+        //glUseProgram(shaderProgram);
+		shaderProgram.use();
+		/*
 		GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
 		GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
 		GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+		*/
 
-		
+		/*	
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		
+		*/
+		shaderProgram.uniform("view", 4, 1, GL_FALSE, glm::value_ptr(view));
+		shaderProgram.uniform("projection", 4, 1, GL_FALSE, glm::value_ptr(projection));
+
 		//std::cout << "ok2 : " << std::endl;
 		int count(0);
 		for(int i(0); i<BOIDS; i++){
@@ -565,7 +575,8 @@ int main(){
 			glm::mat4 model(1.0f);
 			mem_flock[i].get_model(model);
 
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			shaderProgram.uniform("model", 4, 1, GL_FALSE, glm::value_ptr(model));
 			//Draw the structure
 			glBindVertexArray(VAOs[0]);
 			glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
@@ -582,8 +593,8 @@ int main(){
 		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
 		glUseProgram(skyboxProgram);
         view = glm::mat4(glm::mat3(getViewMatrix())); // remove translation from the view matrix
-		viewLoc = glGetUniformLocation(skyboxProgram, "view");
-		projectionLoc = glGetUniformLocation(skyboxProgram, "projection");
+		GLint viewLoc = glGetUniformLocation(skyboxProgram, "view");
+		GLint projectionLoc = glGetUniformLocation(skyboxProgram, "projection");
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
         // skybox cube

@@ -9,6 +9,47 @@ void Program::use(){
 	glUseProgram(programID);
 }
 
+GLuint Program::loadShader(char const *shader_file_path, GLenum shaderType){
+	GLuint shaderID = glCreateShader(shaderType);
+	
+	std::string shaderCodeString;
+	std::ifstream shaderFile(shader_file_path, std::ios::in);
+	if(shaderFile.is_open()){
+		std::stringstream shaderStream;
+		shaderStream << shaderFile.rdbuf();
+		shaderCodeString = shaderStream.str();
+		shaderFile.close();
+	}
+	else{
+		std::string error;
+		error = std::string("Impossible to open file : ") + shader_file_path + "\n";
+		throw std::invalid_argument(error);
+	}
+	
+	char const *shaderCode = shaderCodeString.c_str();
+
+	std::cout << "Compiling shader : " << shader_file_path << std::endl;
+
+	glShaderSource(shaderID, 1, &shaderCode, nullptr);
+	glCompileShader(shaderID);
+
+	GLint success = GL_FALSE;
+	glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+
+	if(success == GL_FALSE){
+		GLint logSize = 0;
+		glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &logSize);
+		std::vector<GLchar> errorLog(logSize);
+		glGetShaderInfoLog(shaderID, logSize, &logSize, &errorLog[0]);
+
+		std::cout << &errorLog[0] << std::endl;
+		glDeleteShader(shaderID);
+		throw std::runtime_error("Compile shader error");
+	}
+
+	return shaderID;
+}
+
 //floats
 void Program::uniform(const char* name, GLfloat v0){
 	GLint nameLoc = glGetUniformLocation(programID, name);
@@ -149,7 +190,7 @@ void Program::uniform(const char *name, int dim, GLsizei count, const GLuint* va
 }
 
 //square matrix
-void Program::uniform(const char *name, int dim, GLsizei count, GL_Boolean transpose, const GLfloat *value){
+void Program::uniform(const char *name, int dim, GLsizei count, GLboolean transpose, const GLfloat *value){
 	GLint nameLoc = glGetUniformLocation(programID, name);
 
 	switch(dim){
@@ -168,7 +209,7 @@ void Program::uniform(const char *name, int dim, GLsizei count, GL_Boolean trans
 }
 
 //rectangular matrix
-void Program::uniform(const char *name, int d1, int d2, GLsizei count, GL_Boolean transpose, const GLfloat *value){
+void Program::uniform(const char *name, int d1, int d2, GLsizei count, GLboolean transpose, const GLfloat *value){
 	GLint nameLoc = glGetUniformLocation(programID, name);
 
 	switch(d1){
@@ -215,52 +256,13 @@ void Program::uniform(const char *name, int d1, int d2, GLsizei count, GL_Boolea
 
 
 
-DrawingProgram::loadShader(char const *shader_file_path, GLenum shaderType){
-	GLuint shaderID = glCreateShader(shaderType);
-	
-	std::string shaderCodeString;
-	std::ifstream shaderFile(shader_file_path, std::ios::in);
-	if(shaderFile.is_open()){
-		std::stringstream shaderStream;
-		shaderStream << shaderFile.rdbuf();
-		shaderCodeString = shaderStream.str();
-		vsFile.close();
-	}
-	else{
-		throw std::invalid_argument("Impossible to open file : %s\n", vs);
-	}
-	
-	char const shaderCode[] = shaderCodeString.c_str();
-
-	std::cout << "Compiling shader : " << shader_file_path << std::endl;
-
-	glShaderSrouce(shaderID, 1, &shaderCode, nullptr);
-	glCompileShader(shaderID);
-
-	GLint success = GL_FALSE;
-	glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
-
-	if(success == GL_FALSE){
-		GLint logSize = 0;
-		glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &logSize);
-		std::vector<GLchar> errorLog(logSize);
-		glGetShaderInfoLog(shaderID, maxLength, &maxLength, &errorLog[0]);
-
-		std::cout << errorLog << endl;
-		glDeleteShader(shaderID);
-		throw std::runtime_error("Compile shader error");
-	}
-
-	return shaderID;
-}
-
-DrawingProgram::initialize(char const *vs, char const *fs){
+DrawingProgram::DrawingProgram(char const *vs, char const *fs){
 	GLuint vsID = loadShader(vs, GL_VERTEX_SHADER);
 	GLuint fsID = loadShader(fs, GL_FRAGMENT_SHADER);
 
-	std::cout << "Linking program\n";
+	std::cout << "Linking drawing program\n";
 
-	GLuint programID = glCreateProgram();
+	programID = glCreateProgram();
 	glAttachShader(programID, vsID);
 	glAttachShader(programID, fsID);
 	glLinkProgram(programID);
@@ -273,9 +275,9 @@ DrawingProgram::initialize(char const *vs, char const *fs){
 		GLint logSize = 0;
 		glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &logSize);
 		std::vector<GLchar> errorLog(logSize);
-		glGetProgramInfoLog(programID, maxLength, &maxLength, &errorLog[0]);
+		glGetProgramInfoLog(programID, logSize, &logSize, &errorLog[0]);
 
-		std::cout << errorLog << endl;
+		std::cout << &errorLog[0] << std::endl;
 		glDeleteProgram(programID);
 		throw std::runtime_error("Compile shader error");
 	}
@@ -285,6 +287,33 @@ DrawingProgram::initialize(char const *vs, char const *fs){
 
 	glDeleteShader(vsID);
 	glDeleteShader(fsID);
+}
 
-	return programID;
+ComputeProgram::ComputeProgram(char const *cs){
+	GLuint csID = loadShader(cs, GL_COMPUTE_SHADER);
+
+	std::cout << "Linking compute program\n";
+
+	programID = glCreateProgram();
+	glAttachShader(programID, csID);
+	glLinkProgram(programID);
+
+
+	GLint success = GL_FALSE;
+	glGetProgramiv(programID, GL_LINK_STATUS, &success);
+
+	if(success == GL_FALSE){
+		GLint logSize = 0;
+		glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &logSize);
+		std::vector<GLchar> errorLog(logSize);
+		glGetProgramInfoLog(programID, logSize, &logSize, &errorLog[0]);
+
+		std::cout << &errorLog[0] << std::endl;
+		glDeleteProgram(programID);
+		throw std::runtime_error("Compile shader error");
+	}
+
+	glDetachShader(programID, csID);
+
+	glDeleteShader(csID);
 }
