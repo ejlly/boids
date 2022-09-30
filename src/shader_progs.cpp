@@ -321,3 +321,8 @@ ComputeProgram::ComputeProgram(char const *cs){
 	glDetachShader(programID, csID);
 	glDeleteShader(csID);
 }
+
+void ComputeProgram::compute(int g_x, int g_y, int g_z){
+	glDispatchCompute(g_x, g_z, g_z);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}

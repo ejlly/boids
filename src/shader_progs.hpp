@@ -64,7 +64,8 @@ class DrawingProgram : public Program{
 class ComputeProgram : public Program{
 	public:
 		ComputeProgram(char const *cs);
+
+		void compute(int g_x, int g_y, int g_z);
 };
 
 #endif
-

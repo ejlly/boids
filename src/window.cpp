@@ -91,7 +91,7 @@ int main(){
 
 	Camera cam(win);
 
-	DrawingProgram shaderProgram("src/shaders/SimpleVertexShader.vs", "src/shaders/SimpleFragmentShader.fs");
+	DrawingProgram shaderProgram("src/shaders/boidShader.vs", "src/shaders/boidShader.fs");
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
 		//Position				//Color Face			//Color edge		
@@ -251,12 +251,12 @@ int main(){
 
 	//Boids buffer
 	GLuint boidsBuf;
+
 	glGenBuffers(1, &boidsBuf);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, boidsBuf);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, BOIDS * sizeof(Boid), flock, GL_DYNAMIC_COPY);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Boid)*BOIDS, flock, GL_DYNAMIC_COPY);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
 	
 	GLuint nbUnits = BOIDS/32;
 	GLuint groups = 1;
@@ -324,13 +324,11 @@ int main(){
 			barycenter = barycenter/(float) BOIDS;
 			computeForces.uniform_3f("barycenter", 1, &barycenter[0]);
 		}
-
-		glDispatchCompute(groups, 1, 1);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		computeForces.compute(groups, 1, 1);
+		
 
 		computeUpdateBoids.use();
-		glDispatchCompute(groups, 1, 1);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		computeUpdateBoids.compute(groups, 1, 1);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, boidsBuf);
 		gpuFlock = (Boid*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
@@ -344,14 +342,11 @@ int main(){
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		//glm::mat4 view = getViewMatrix();
-		//glm::mat4 projection = getProjectionMatrix();
 
 		shaderProgram.use();
 		shaderProgram.uniform_4x4("view", 1, GL_FALSE, glm::value_ptr(cam.getViewMatrix()));
 		shaderProgram.uniform_4x4("projection", 1, GL_FALSE, glm::value_ptr(cam.getProjectionMatrix()));
 
-		int count(0);
 		for(int i(0); i<BOIDS; i++){
 			glm::mat4 model(1.0f);
 			mem_flock[i].get_model(model);
