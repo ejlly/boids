@@ -11,6 +11,7 @@ class Program{
 
 	public:
 		void use();
+		~Program();
 		//floats
 		void uniformf(const char *name, GLfloat v0);
 		void uniformf(const char *name, GLfloat v0, GLfloat v1);

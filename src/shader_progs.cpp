@@ -5,9 +5,6 @@
 #include <string>
 #include "shader_progs.hpp"
 
-void Program::use(){
-	glUseProgram(programID);
-}
 
 GLuint Program::loadShader(char const *shader_file_path, GLenum shaderType){
 	GLuint shaderID = glCreateShader(shaderType);
@@ -48,6 +45,14 @@ GLuint Program::loadShader(char const *shader_file_path, GLenum shaderType){
 	}
 
 	return shaderID;
+}
+
+Program::~Program(){
+	glDeleteProgram(programID);
+}
+
+void Program::use(){
+	glUseProgram(programID);
 }
 
 //floats

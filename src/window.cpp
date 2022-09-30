@@ -3,7 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <sstream>
-
+#include <vector>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,9 +19,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-//
-#include "common/controls.hpp"
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "common/stb_image.h"
 
@@ -29,6 +26,7 @@
 #include "boids.hpp"
 #include "keys.hpp"
 #include "shader_progs.hpp"
+#include "camera.hpp"
 
 // Function prototypes
 
@@ -64,40 +62,36 @@ unsigned int loadCubemap(std::vector<std::string> faces)
     return textureID;
 }
 
-GLFWwindow* window;
+//GLFWwindow* window;
 
 // The MAIN function, from here we start the application and run the game loop
 int main(){
 
-    // Init GLFW
     glfwInit();
-    // Set all the required options for GLFW
+	
+	int const WIDTH = 1500, HEIGHT = 900;
+	Window win(WIDTH, HEIGHT);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-    // Create a GLFWwindow object that we can use for GLFW's functions
-	int const WIDTH = 1500, HEIGHT = 900;
-    window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
+	GLFWwindow *window(win.getaddr());
+
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Boids Simulation", nullptr, nullptr);
+	win.setWindow(window);
     glfwMakeContextCurrent(window);
 
-    // Set the required callback functions
     glfwSetKeyCallback(window, key_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
-    // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
     glewExperimental = GL_TRUE;
-    // Initialize GLEW to setup the OpenGL Function pointers
     glewInit();
-
-    // Define the viewport dimensions
     glViewport(0, 0, WIDTH, HEIGHT);
 
+	Camera cam(win);
 
-    // Build and compile our shader program
 	DrawingProgram shaderProgram("src/shaders/SimpleVertexShader.vs", "src/shaders/SimpleFragmentShader.fs");
-	
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
 		//Position				//Color Face			//Color edge		
@@ -311,11 +305,12 @@ int main(){
 
 
     // Game loop
-    while (!glfwWindowShouldClose(window)){
+    while (!glfwWindowShouldClose(win.getaddr())){
         glfwPollEvents();
 		GLfloat timeValue = glfwGetTime();
 
-		computeMatricesFromInputs();
+		//computeMatricesFromInputs();
+		cam.update();
 
 			
 		//Update flock
@@ -349,12 +344,12 @@ int main(){
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		glm::mat4 view = getViewMatrix();
-		glm::mat4 projection = getProjectionMatrix();
+		//glm::mat4 view = getViewMatrix();
+		//glm::mat4 projection = getProjectionMatrix();
 
 		shaderProgram.use();
-		shaderProgram.uniform_4x4("view", 1, GL_FALSE, glm::value_ptr(view));
-		shaderProgram.uniform_4x4("projection", 1, GL_FALSE, glm::value_ptr(projection));
+		shaderProgram.uniform_4x4("view", 1, GL_FALSE, glm::value_ptr(cam.getViewMatrix()));
+		shaderProgram.uniform_4x4("projection", 1, GL_FALSE, glm::value_ptr(cam.getProjectionMatrix()));
 
 		int count(0);
 		for(int i(0); i<BOIDS; i++){
@@ -374,10 +369,10 @@ int main(){
 
 		glDepthFunc(GL_LEQUAL); 
 		skyboxProgram.use();
-        view = glm::mat4(glm::mat3(getViewMatrix()));
+		glm::mat4 view = glm::mat4(glm::mat3(cam.getViewMatrix()));
 		
 		skyboxProgram.uniform_4x4("view", 1, GL_FALSE, glm::value_ptr(view));
-		skyboxProgram.uniform_4x4("projection", 1, GL_FALSE, glm::value_ptr(projection));
+		skyboxProgram.uniform_4x4("projection", 1, GL_FALSE, glm::value_ptr(cam.getProjectionMatrix()));
 
         // skybox cube
         glBindVertexArray(skyboxVAO);
@@ -388,7 +383,7 @@ int main(){
         glDepthFunc(GL_LESS);
 
 		// Swap the screen buffers
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(win.getaddr());
     }
     glDeleteVertexArrays(2, VAOs);
 	glDeleteVertexArrays(1, &skyboxVAO);

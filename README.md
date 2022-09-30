@@ -4,6 +4,7 @@ Realtime boids simulation of 3D boids using OpenGL
 
 ![Alt Text](https://user-images.githubusercontent.com/96349904/192848075-afb932de-900c-47ed-8848-191f42e87acb.gif)
 
+This is my first OpenGL project, done with help from the openGL tutorial : https://learnopengl.com
 # Principle
 
 We simulate boids in a 3D environment. This is based on the model made by Craig W. Reynolds (https://en.wikipedia.org/wiki/Boids).
@@ -18,6 +19,7 @@ Shortly put, each boid is subjected to :
 - a box-keeping force, which makes it stay near the origin
 
 The flock is initialized at random at the beginning.
+
 
 # Controls
 
