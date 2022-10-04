@@ -52,34 +52,4 @@ class Boid{
 
 };
 
-#define MAX_BOIDS 10000
-
-class Flock{
-	private:
-		//TODO: change names
-		inline static float separationRate = 13.f;
-		inline static float wallRepulsionRate = 1.0f;  
-		inline static float perceptionDistance = 15.0f; //units
-		inline static float repulsionDistance = 1.f; //units
-		inline static float box_size = 60.0f; //must be bigger than 1.0f
-		Boid boids[MAX_BOIDS];
-		unsigned int m_size;
-		
-		void coherenceForce();
-		void repulsionForce();
-		void boxForce();
-		void speedRegulationForce();
-
-	public:
-		inline static float coherenceRate = 0.14f;
-
-		bool add_boid();
-		void init_boids(unsigned int nbBoids);
-		unsigned int size();
-		
-		void update();
-
-		Boid& operator[](int i);
-};
-
 #endif
