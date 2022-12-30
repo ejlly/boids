@@ -9,7 +9,7 @@ This is my first OpenGL project, done with help from the openGL tutorial : https
 
 We simulate boids in a 3D environment. This is based on the model made by Craig W. Reynolds (https://en.wikipedia.org/wiki/Boids).
 
-It uses a naive implementation where each boid checks all the other boids to determine where it goes next.
+It uses a naive implementation where each boid checks all the other boids' positions to determine its next direction.
 
 Shortly put, each boid is subjected to :
 - a coohesion force, which makes it match the velocity and direction of its neighbours
