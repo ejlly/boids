@@ -12,7 +12,7 @@ We simulate boids in a 3D environment. This is based on the model made by Craig 
 It uses a naive implementation where each boid checks all the other boids' positions to determine its next direction.
 
 Shortly put, each boid is subjected to :
-- a coohesion force, which makes it match the velocity and direction of its neighbours
+- a cohesion force, which makes it match the velocity and direction of its neighbours
 
 - a repulsion force, which makes it evade collisions
 
